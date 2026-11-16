@@ -355,6 +355,24 @@
       <span id="balance" style="font-size:20px; font-weight:600;">$0</span>
     </div>
 
+    <div id="cardDia" class="card" style="display:none;">
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:10px;">
+        <span style="font-weight:700; font-size:15px;">📅 Día a día</span>
+        <input type="date" id="diaSelect" onchange="onDiaChange()" style="padding:6px 8px; border-radius:8px; border:1px solid var(--border); background:var(--card); color:inherit; font-size:14px;">
+      </div>
+      <div class="grid2">
+        <div class="metric">
+          <p class="label">Costo del día</p>
+          <p class="value" id="diaCosto" style="color:var(--red);">$0</p>
+        </div>
+        <div class="metric">
+          <p class="label">Ganancia del día</p>
+          <p class="value" id="diaGanancia" style="color:#27ae60;">$0</p>
+        </div>
+      </div>
+      <p id="diaDetalle" style="font-size:12px; color:var(--text-secondary); margin:10px 0 0;"></p>
+    </div>
+
     <div class="grid2">
       <div class="metric">
         <p class="label">💵 Efectivo disponible</p>
@@ -1016,7 +1034,72 @@ function renderBars(pIng, pGas, ing, gas){
     </div>`;
 }
 
+// ---------- Día a día: costo y ganancia del día ----------
+function hoyStr(){
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+let diaVista = null;           // null = hoy
+let _diaRef = null;            // store que ya revisamos
+let _diaVistos = new WeakSet(); // movimientos que ya existían al abrir / cargar los datos
+
+// Lo que ya estaba cargado antes de esta versión queda "sin día" (null).
+// Lo que se carga a partir de ahora se marca con la fecha de hoy.
+function asegurarDias(){
+  const nuevo = (_diaRef !== store);
+  if(nuevo){ _diaRef = store; _diaVistos = new WeakSet(); }
+  const hoy = hoyStr();
+  let marcados = false;
+  ['personal','negocio'].forEach(cat => {
+    const meses = (store && store[cat]) || {};
+    Object.keys(meses).forEach(mes => {
+      (meses[mes] || []).forEach(it => {
+        if(!it || typeof it !== 'object') return;
+        if(it.dia === undefined){
+          if(nuevo || _diaVistos.has(it)){ it.dia = null; }
+          else { it.dia = hoy; marcados = true; }
+        }
+        _diaVistos.add(it);
+      });
+    });
+  });
+  if(marcados){ try { saveMov(); } catch(e) { console.error(e); } }
+}
+
+function onDiaChange(){
+  const v = document.getElementById('diaSelect').value;
+  diaVista = v || null;
+  renderDia();
+}
+
+function renderDia(){
+  const card = document.getElementById('cardDia');
+  if(!card) return;
+  if(currentCat !== 'negocio'){ card.style.display = 'none'; return; }
+  card.style.display = 'block';
+  const dia = diaVista || hoyStr();
+  const sel = document.getElementById('diaSelect');
+  if(sel && sel.value !== dia) sel.value = dia;
+  const mes = ymKey(new Date(dia + 'T12:00:00'));
+  const delMes = (store.negocio && store.negocio[mes]) || [];
+  const items = delMes.filter(i => i.dia === dia);
+  const ventas = items.filter(i => i.tipo === 'ingreso').reduce((a,b) => a + b.monto, 0);
+  const costo = items.filter(i => i.tipo === 'gasto' && i.metodo === 'costo_venta').reduce((a,b) => a + b.monto, 0);
+  const otros = items.filter(i => i.tipo === 'gasto' && i.metodo !== 'costo_venta').reduce((a,b) => a + b.monto, 0);
+  const ganancia = ventas - costo;
+  document.getElementById('diaCosto').textContent = fmt(costo);
+  const gEl = document.getElementById('diaGanancia');
+  gEl.textContent = fmt(ganancia);
+  gEl.style.color = ganancia >= 0 ? '#27ae60' : '#e74c3c';
+  let det = 'Ventas ' + fmt(ventas) + ' · Otros gastos ' + fmt(otros) + ' · Ganancia neta ' + fmt(ganancia - otros);
+  const sinDia = delMes.filter(i => i.dia === null || i.dia === undefined).length;
+  if(sinDia > 0) det += '\n' + sinDia + ' movimientos de antes de esta actualización no tienen día asignado.';
+  document.getElementById('diaDetalle').style.whiteSpace = 'pre-line';
+  document.getElementById('diaDetalle').textContent = det;
+}
+
 function renderFinanzas(){
+  asegurarDias();
   const items = store[currentCat][currentKey] || [];
   const ing = items.filter(i=>i.tipo==='ingreso').reduce((a,b)=>a+b.monto,0);
   const gas = items.filter(i=>i.tipo==='gasto').reduce((a,b)=>a+b.monto,0);
@@ -1093,6 +1176,7 @@ function renderFinanzas(){
   renderCobranzaResumen();
   vendRenderPend();
   renderAvisoEspacio();
+  renderDia();
   renderCompras();
 
   // Mostrar/ocultar sección de ganancia por producto
