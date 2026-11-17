@@ -305,6 +305,8 @@
       <button id="btnSync" class="menu-item" style="background:#27ae60; color:white; border:none; justify-content:center;" onclick="toggleSincronizacion(); toggleMenuSistema()">☁️ Activar Sincronización</button>
       <button class="menu-item" onclick="abrirCodigoSync(); toggleMenuSistema()"><span>🔑 Código de sincronización</span></button>
       <button class="menu-item" onclick="abrirConfiguracionSync(); toggleMenuSistema()"><span>☁️ Config. servidor</span></button>
+      <button class="menu-item" onclick="abrirPerfiles(); toggleMenuSistema()"><span>👥 Perfiles vinculados<small>Ver, solo lectura, a quien comparta con vos</small></span></button>
+      <button class="menu-item" onclick="abrirCompartir(); toggleMenuSistema()"><span>🔗 Compartir mi perfil<small>Con el código que te dieron</small></span></button>
       <p id="syncEstado" style="margin:4px 0 0; font-size:12px; color:var(--text-secondary); text-align:center;"></p>
     </div>
 
@@ -736,6 +738,9 @@ function prevKey(key){
 }
 
 // ---------- Estado ----------
+let modoEspejo = false;
+let espejoGuardado = null;
+let perfilToken = localStorage.getItem('perfil_token') || null;
 let store = (() => {
   try {
     const data = localStorage.getItem('movimientos_v2');
@@ -786,6 +791,7 @@ let productos = (() => {
   }
 })();
 function saveProductos(){
+  perfilSubirDebounced();
   vendPublicarDebounced();
   persistir('productos_v1', productos);
   guardarLS('sync_ts', String(Date.now()));
@@ -951,12 +957,14 @@ function limpiarBusquedaClientes() {
 }
 
 function saveMov(){
+  perfilSubirDebounced();
   persistir('movimientos_v2', store);
   guardarLS('sync_ts', String(Date.now()));
   if(sincronizacionActiva) sincronizarDatos();
 }
 
 function saveClientes(){
+  perfilSubirDebounced();
   vendPublicarDebounced();
   persistir('clientes_v1', clientes);
   guardarLS('sync_ts', String(Date.now()));
@@ -1033,6 +1041,246 @@ function renderBars(pIng, pGas, ing, gas){
       <span class="bar-label">Este mes</span>
     </div>`;
 }
+
+// ================= Perfiles vinculados (el dueño ve, solo lectura, el perfil de quien aceptó compartirlo) =================
+const PERF_BLOQ = new Set(['abrirAgregar','abrirBoleta','abrirCatalogo','abrirCambiarPin','abrirStock','abrirVentasVend','abrirCodigoSync','abrirConfiguracionSync','abrirPerfiles','abrirCompartir','addBoletaItem','addCliente','addCompra','addMovimiento','agregarProducto','ajustarStock','anularMov','borrarBoletaGuardada','borrarEmpleado','cobrarDesdeCobranza','confirmarCambiarPin','confirmarPagoDeuda','crearEmpleado','delBoletaItem','delCliente','delMovimiento','delProducto','descargarBackup','editarCliente','elegirFotoProducto','empAddLinea','empDelLinea','empDeshacer','empGuardar','enviarBoleta','guardarEdicionCliente','guardarMensajeCobranza','guardarMetasDueno','ignorarRecuperarClientes','liberarEspacioManual','marcarDeudaBoleta','marcarPagado','marcarVisitado','marcarVisitadoBoleta','metasCancelar','metasCopiarAnterior','metasEditar','metasGuardarEmpleado','metasQuitar','pagarDeudaCliente','quitarFotoProducto','recuperarClientes','resetClaveEmpleado','toggleSincronizacion','vdAbrirBoleta','vdAbrirCobro','vdAddFila','vdCargar','vdDelFila','vdGuardarBoleta','vdRegistrarCobro','vdVisitado','vendAceptar','vendAceptarTodas','vendPublicarManual','vendRechazar']);
+
+// Mientras se mira otro perfil, nada se escribe en el teléfono del dueño
+const _setItemOrig = Storage.prototype.setItem;
+const _removeItemOrig = Storage.prototype.removeItem;
+Storage.prototype.setItem = function(k, v){ if(modoEspejo && this === window.localStorage && k !== 'darkMode') return; return _setItemOrig.call(this, k, v); };
+Storage.prototype.removeItem = function(k){ if(modoEspejo && this === window.localStorage) return; return _removeItemOrig.call(this, k); };
+
+document.addEventListener('click', function(e){
+  if(!modoEspejo) return;
+  const el = e.target && e.target.closest ? e.target.closest('[onclick]') : null;
+  if(!el || el.closest('#espejoBanner') || el.closest('#perfOverlay')) return;
+  const oc = el.getAttribute('onclick') || '';
+  const re = /([A-Za-z_]\w*)\s*\(/g; let m;
+  while((m = re.exec(oc))){
+    if(PERF_BLOQ.has(m[1])){
+      e.stopImmediatePropagation(); e.preventDefault();
+      perfToast('👁️ Solo lectura: volvé a tu perfil para hacer cambios');
+      return;
+    }
+  }
+}, true);
+
+(function(){
+  const st = document.createElement('style');
+  st.textContent = 'body.espejo{padding-top:56px !important;} body.espejo .tab[data-tab="personal"]{display:none;}';
+  document.head.appendChild(st);
+})();
+
+function perfEsc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function perfHace(iso){
+  if(!iso) return 'nunca';
+  const m = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+  if(m < 1) return 'recién';
+  if(m < 60) return 'hace ' + m + ' min';
+  const h = Math.round(m / 60);
+  if(h < 24) return 'hace ' + h + ' h';
+  const d = Math.round(h / 24);
+  return 'hace ' + d + (d === 1 ? ' día' : ' días');
+}
+function perfToast(msg){
+  let t = document.getElementById('perfToast');
+  if(!t){ t = document.createElement('div'); t.id = 'perfToast'; t.style.cssText = 'position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#222;color:#fff;padding:10px 14px;border-radius:10px;font-size:13px;z-index:10000;max-width:86%;text-align:center;'; document.body.appendChild(t); }
+  t.textContent = msg; t.style.display = 'block';
+  clearTimeout(t._h); t._h = setTimeout(() => { t.style.display = 'none'; }, 2600);
+}
+function perfOverlay(html){
+  let o = document.getElementById('perfOverlay');
+  if(!o){
+    o = document.createElement('div'); o.id = 'perfOverlay';
+    o.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.55);display:flex;align-items:flex-end;justify-content:center;';
+    o.addEventListener('click', e => { if(e.target === o) perfCerrar(); });
+    document.body.appendChild(o);
+  }
+  o.innerHTML = '<div style="background:var(--card);border:1px solid var(--border);border-radius:16px 16px 0 0;width:100%;max-width:520px;max-height:85vh;overflow:auto;padding:16px 16px calc(env(safe-area-inset-bottom,0px) + 16px);box-sizing:border-box;">' + html + '</div>';
+  o.style.display = 'flex';
+}
+function perfCerrar(){ const o = document.getElementById('perfOverlay'); if(o) o.style.display = 'none'; }
+function perfTitulo(t){ return '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;"><b style="font-size:17px;">' + t + '</b><button onclick="perfCerrar()" style="background:none;border:none;font-size:20px;color:inherit;padding:4px 8px;">✕</button></div>'; }
+const PERF_BTN = 'display:block;width:100%;padding:12px;border-radius:10px;border:1px solid var(--border);background:var(--bg);color:inherit;font-size:15px;margin-top:8px;';
+const PERF_BTN_P = 'display:block;width:100%;padding:12px;border-radius:10px;border:none;background:#534ab7;color:#fff;font-size:15px;font-weight:600;margin-top:8px;';
+
+async function perfilesApi(cuerpo){
+  if(!urlServidor) throw new Error('Primero configurá el servidor (Datos y nube → Config. servidor)');
+  let r;
+  try {
+    r = await fetch(urlServidor + '/api/perfiles', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(cuerpo) });
+  } catch(e) { throw new Error('Sin conexión con el servidor'); }
+  let j = null; try { j = await r.json(); } catch(e) {}
+  return { status: r.status, ok: r.ok, json: j };
+}
+function perfError(msg){ perfOverlay(perfTitulo('👥 Perfiles') + '<p style="color:#e74c3c;font-size:14px;">' + perfEsc(msg) + '</p><button style="' + PERF_BTN + '" onclick="perfCerrar()">Cerrar</button>'); }
+
+// ---------- Lado dueño ----------
+async function abrirPerfiles(){
+  if(modoEspejo){ perfToast('Volvé primero a tu perfil'); return; }
+  perfOverlay(perfTitulo('👥 Perfiles vinculados') + '<p style="font-size:14px;">Cargando…</p>');
+  try {
+    const r = await perfilesApi({ action: 'listar', syncId: getSyncId() });
+    if(!r.ok) throw new Error((r.json && r.json.error) || 'No se pudo cargar');
+    perfPintarLista(r.json.perfiles || []);
+  } catch(e) { perfError(e.message); }
+}
+function perfFmtCodigo(c){ return c ? c.slice(0, 4) + '-' + c.slice(4) : ''; }
+function perfPintarLista(lista){
+  let h = perfTitulo('👥 Perfiles vinculados');
+  h += '<p style="font-size:12px;color:var(--text-secondary);margin:0 0 10px;">Cada persona usa su propia app con su usuario y contraseña y acepta compartirte su perfil. Vos lo ves en modo solo lectura. Solo se comparte el negocio (clientes, ventas, productos), nunca lo personal.</p>';
+  if(!lista.length) h += '<p style="font-size:14px;color:var(--text-secondary);">Todavía no hay perfiles.</p>';
+  lista.forEach(p => {
+    h += '<div style="border:1px solid var(--border);border-radius:10px;padding:10px;margin-top:8px;">';
+    h += '<div style="font-weight:600;">' + perfEsc(p.nombre) + '</div>';
+    if(p.vinculado){
+      h += '<div style="font-size:12px;color:var(--text-secondary);margin:2px 0 6px;">✅ Vinculado · última actualización ' + perfHace(p.actualizado) + '</div>';
+      h += '<div style="display:flex;gap:8px;"><button style="' + PERF_BTN_P + 'margin-top:0;" onclick="perfVer(\'' + p.id + '\')">👁️ Ver perfil</button><button style="' + PERF_BTN + 'margin-top:0;width:auto;" onclick="perfBorrar(\'' + p.id + '\')">🗑️</button></div>';
+    } else {
+      h += '<div style="font-size:12px;color:var(--text-secondary);margin:2px 0 4px;">⏳ Esperando que ingrese este código:</div>';
+      h += '<div style="font-size:22px;font-weight:700;letter-spacing:2px;">' + perfFmtCodigo(p.codigo) + '</div>';
+      h += '<button style="' + PERF_BTN + '" onclick="perfBorrar(\'' + p.id + '\')">🗑️ Borrar</button>';
+    }
+    h += '</div>';
+  });
+  h += '<button style="' + PERF_BTN_P + '" onclick="perfNuevo()">➕ Nuevo perfil</button>';
+  perfOverlay(h);
+}
+async function perfNuevo(){
+  const nombre = prompt('Nombre del perfil (ej: Papá, Vendedor Juan)');
+  if(!nombre || !nombre.trim()) return;
+  try {
+    const r = await perfilesApi({ action: 'crear', syncId: getSyncId(), nombre: nombre.trim() });
+    if(!r.ok) throw new Error((r.json && r.json.error) || 'No se pudo crear');
+    const cod = perfFmtCodigo(r.json.codigo);
+    perfOverlay(perfTitulo('✅ Perfil creado') +
+      '<p style="font-size:14px;">Pasale este código a <b>' + perfEsc(nombre.trim()) + '</b>:</p>' +
+      '<div style="font-size:30px;font-weight:700;letter-spacing:3px;text-align:center;margin:10px 0;">' + cod + '</div>' +
+      '<p style="font-size:13px;color:var(--text-secondary);">Tiene que abrir la app en su teléfono, entrar a ≡ → Datos y nube → 🔗 Compartir mi perfil y escribir el código. El código se usa una sola vez.</p>' +
+      '<button style="' + PERF_BTN + '" onclick="navigator.clipboard && navigator.clipboard.writeText(\'' + cod + '\'); perfToast(\'Código copiado\')">📋 Copiar código</button>' +
+      '<button style="' + PERF_BTN_P + '" onclick="abrirPerfiles()">Volver a la lista</button>');
+  } catch(e) { perfError(e.message); }
+}
+async function perfBorrar(id){
+  if(!confirm('¿Borrar este perfil? Se elimina lo que compartió con vos. La persona sigue teniendo su app y sus datos.')) return;
+  try {
+    const r = await perfilesApi({ action: 'borrar', syncId: getSyncId(), id });
+    if(!r.ok) throw new Error((r.json && r.json.error) || 'No se pudo borrar');
+    abrirPerfiles();
+  } catch(e) { perfError(e.message); }
+}
+async function perfVer(id){
+  perfOverlay(perfTitulo('👁️ Perfil') + '<p style="font-size:14px;">Cargando datos…</p>');
+  try {
+    const r = await perfilesApi({ action: 'ver', syncId: getSyncId(), id });
+    if(!r.ok) throw new Error((r.json && r.json.error) || 'No se pudo cargar');
+    let snap = null;
+    try { snap = JSON.parse(r.json.snapshot); } catch(e) {}
+    if(!snap) throw new Error('Los datos de este perfil no se pudieron leer');
+    perfCerrar();
+    entrarEspejo(r.json.nombre, snap, r.json.actualizado);
+  } catch(e) { perfError(e.message); }
+}
+
+// ---------- Vista de solo lectura ----------
+function entrarEspejo(nombre, snap, actualizado){
+  if(modoEspejo) return;
+  espejoGuardado = { store, clientes, productos, boletaNroActual, fotosProd, currentCat, currentKey, diaVista, currentTab };
+  modoEspejo = true;
+  clearTimeout(syncTimer);
+  store = { personal: {}, negocio: (snap.store && snap.store.negocio) || {} };
+  clientes = Array.isArray(snap.clientes) ? snap.clientes : [];
+  productos = Array.isArray(snap.productos) ? snap.productos : [];
+  fotosProd = {};
+  boletaNroActual = parseInt(snap.boleta_nro) || 1000;
+  currentKey = ymKey(new Date());
+  diaVista = null;
+  document.body.classList.add('espejo');
+  let b = document.getElementById('espejoBanner');
+  if(!b){ b = document.createElement('div'); b.id = 'espejoBanner'; document.body.appendChild(b); }
+  b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9998;background:#534ab7;color:#fff;padding:calc(env(safe-area-inset-top,0px) + 8px) 12px 8px;display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:13px;box-sizing:border-box;';
+  b.innerHTML = '<span>👁️ Perfil de <b>' + perfEsc(nombre) + '</b> · solo lectura<br><small style="opacity:.85;">Actualizado ' + perfHace(actualizado) + '</small></span><button onclick="salirEspejo()" style="background:#fff;color:#534ab7;border:none;border-radius:8px;padding:8px 10px;font-weight:700;font-size:13px;">Volver a mi perfil</button>';
+  try { renderMesSelect(); setTab('negocio'); renderClientes(); } catch(e) { console.error(e); }
+  window.scrollTo(0, 0);
+}
+function salirEspejo(){
+  if(!modoEspejo) return;
+  const g = espejoGuardado;
+  store = g.store; clientes = g.clientes; productos = g.productos; boletaNroActual = g.boletaNroActual; fotosProd = g.fotosProd;
+  currentCat = g.currentCat; currentKey = g.currentKey; diaVista = g.diaVista;
+  modoEspejo = false; espejoGuardado = null;
+  document.body.classList.remove('espejo');
+  const b = document.getElementById('espejoBanner'); if(b) b.remove();
+  try { renderMesSelect(); setTab(g.currentTab || currentCat); renderClientes(); } catch(e) { console.error(e); }
+  window.scrollTo(0, 0);
+}
+
+// ---------- Lado de quien comparte su perfil ----------
+let perfTimer = null;
+function perfilSubirDebounced(){
+  if(!perfilToken || modoEspejo) return;
+  clearTimeout(perfTimer);
+  perfTimer = setTimeout(() => { perfilSubir().catch(() => {}); }, 2500);
+}
+async function perfilSubir(){
+  if(!perfilToken || !urlServidor || modoEspejo) return false;
+  if(!hayDatosLocales()) return false; // nunca subir una app vacía
+  const snapshot = JSON.stringify({ store: { personal: {}, negocio: store.negocio || {} }, clientes, productos, boleta_nro: boletaNroActual, fecha: new Date().toISOString() });
+  const r = await perfilesApi({ action: 'subir', token: perfilToken, snapshot, ts: Date.now() });
+  if(r.status === 410){
+    localStorage.removeItem('perfil_token'); perfilToken = null;
+    alert('Tu perfil fue desvinculado: dejaste de compartir tus datos.');
+    return false;
+  }
+  if(r.ok){ localStorage.setItem('perfil_ultimo_envio', new Date().toISOString()); return true; }
+  return false;
+}
+function abrirCompartir(){
+  if(modoEspejo){ perfToast('Volvé primero a tu perfil'); return; }
+  if(perfilToken){
+    perfOverlay(perfTitulo('🔗 Compartir mi perfil') +
+      '<p style="font-size:14px;">✅ Estás compartiendo tu perfil.</p>' +
+      '<p style="font-size:13px;color:var(--text-secondary);">La persona que te dio el código puede ver tus clientes, ventas y productos en modo solo lectura. No puede cambiar nada, y tus movimientos personales no se comparten.</p>' +
+      '<p style="font-size:12px;color:var(--text-secondary);">Último envío: ' + perfHace(localStorage.getItem('perfil_ultimo_envio')) + '</p>' +
+      '<button style="' + PERF_BTN + '" onclick="perfEnviarAhora()">🔄 Enviar ahora</button>' +
+      '<button style="' + PERF_BTN + 'color:#e74c3c;" onclick="perfDejar()">Dejar de compartir</button>');
+  } else {
+    perfOverlay(perfTitulo('🔗 Compartir mi perfil') +
+      '<p style="font-size:14px;">Escribí el código que te dio la persona con la que vas a compartir tu perfil.</p>' +
+      '<input id="perfCodigo" placeholder="XXXX-XXXX" autocapitalize="characters" autocomplete="off" style="width:100%;box-sizing:border-box;padding:12px;border-radius:10px;border:1px solid var(--border);background:var(--bg);color:inherit;font-size:20px;letter-spacing:2px;text-align:center;">' +
+      '<p style="font-size:12px;color:var(--text-secondary);">Al aceptar, esa persona podrá ver tus clientes, ventas y productos del negocio (no lo personal), solo para mirar. Podés dejar de compartir cuando quieras.</p>' +
+      '<button style="' + PERF_BTN_P + '" onclick="perfAceptar()">Aceptar y compartir</button>');
+  }
+}
+async function perfAceptar(){
+  const cod = (document.getElementById('perfCodigo').value || '').trim();
+  if(!cod) return;
+  if(!confirm('¿Confirmás compartir tu perfil? Esa persona va a poder ver tus clientes, ventas y productos del negocio, solo para mirar.')) return;
+  try {
+    const r = await perfilesApi({ action: 'vincular', codigo: cod });
+    if(!r.ok) throw new Error((r.json && r.json.error) || 'No se pudo vincular');
+    perfilToken = r.json.token;
+    localStorage.setItem('perfil_token', perfilToken);
+    const ok = await perfilSubir().catch(() => false);
+    perfOverlay(perfTitulo('✅ Listo') + '<p style="font-size:14px;">Ya estás compartiendo tu perfil.' + (ok ? '' : ' Se va a enviar apenas tengas datos cargados.') + '</p><button style="' + PERF_BTN_P + '" onclick="perfCerrar()">Cerrar</button>');
+  } catch(e) { perfError(e.message); }
+}
+async function perfEnviarAhora(){
+  try {
+    const ok = await perfilSubir();
+    perfToast(ok ? '✅ Enviado' : (perfilToken ? 'No se pudo enviar (¿tenés datos cargados?)' : 'Ya no estás vinculado'));
+    if(perfilToken) abrirCompartir(); else perfCerrar();
+  } catch(e) { perfToast(e.message); }
+}
+async function perfDejar(){
+  if(!confirm('¿Dejar de compartir tu perfil? La otra persona ya no podrá verlo.')) return;
+  try { await perfilesApi({ action: 'desvincular', token: perfilToken }); } catch(e) {}
+  localStorage.removeItem('perfil_token'); perfilToken = null;
+  perfOverlay(perfTitulo('Listo') + '<p style="font-size:14px;">Dejaste de compartir tu perfil.</p><button style="' + PERF_BTN_P + '" onclick="perfCerrar()">Cerrar</button>');
+}
+setTimeout(() => { perfilSubirDebounced(); }, 8000);
+
 
 // ---------- Día a día: costo y ganancia del día ----------
 function hoyStr(){
@@ -2735,8 +2983,8 @@ async function cargarDesencriptado(pin, clave) {
 // ---------- SINCRONIZACIÓN EN LA NUBE ----------
 // Un solo documento en la nube, ENCRIPTADO en este dispositivo con tu PIN (el servidor nunca ve ni el PIN ni los datos).
 // Se identifica con un código de sincronización largo y secreto. Gana siempre el cambio más reciente.
-let urlServidor = localStorage.getItem('serverUrl') ||
-  ((location.protocol === 'http:' || location.protocol === 'https:') ? location.origin : null);
+// Servidor por defecto: el de 70 Veces 7 (así otros teléfonos funcionan sin configurar nada)
+let urlServidor = localStorage.getItem('serverUrl') || 'https://nybshasojktgulvpumcw.supabase.co/functions/v1/api';
 let sincronizacionActiva = localStorage.getItem('sincronizacion_activa') === 'true';
 let syncTimer = null;
 let syncAplicando = false;
@@ -2769,7 +3017,7 @@ function hayDatosLocales() {
 
 // Se llama después de cada guardado; junta varios cambios en un solo envío
 function sincronizarDatos() {
-  if(!sincronizacionActiva || !urlServidor || pinActual === null || syncAplicando) return;
+  if(modoEspejo || !sincronizacionActiva || !urlServidor || pinActual === null || syncAplicando) return;
   clearTimeout(syncTimer);
   syncTimer = setTimeout(() => { subirDatos().catch(() => setSyncEstado('⚠️ Sin conexión: se reintenta en el próximo cambio')); }, 1500);
 }
@@ -2786,7 +3034,7 @@ async function llamarServidor(cuerpo) {
 }
 
 async function subirDatos() {
-  if(!urlServidor || pinActual === null) return;
+  if(modoEspejo || !urlServidor || pinActual === null) return;
   let ts = parseInt(localStorage.getItem('sync_ts') || '0');
   if(!ts) {
     if(!hayDatosLocales()) return; // nunca subir una app vacía
@@ -2840,7 +3088,7 @@ async function aplicarDatosRemotos(d, ts) {
 
 // Baja lo de la nube si es más nuevo, o sube lo local si es más nuevo
 async function sincronizarAlEntrar(manual) {
-  if(!sincronizacionActiva || !urlServidor || pinActual === null) return;
+  if(modoEspejo || !sincronizacionActiva || !urlServidor || pinActual === null) return;
   setSyncEstado('Sincronizando…');
   try {
     const remoto = await bajarDatos();
@@ -2951,6 +3199,7 @@ function publicarCatalogo() {
   return stockLlamar('publicar_catalogo', { productos: productos.map(p => ({ id: p.id, nombre: p.nombre })) });
 }
 function publicarCatalogoDebounced() {
+  if(modoEspejo) return;
   clearTimeout(catalogoTimer);
   catalogoTimer = setTimeout(() => { publicarCatalogo().catch(() => {}); }, 2000);
 }
@@ -3235,6 +3484,7 @@ async function vendPublicar() {
   return r;
 }
 function vendPublicarDebounced() {
+  if(modoEspejo) return;
   if(localStorage.getItem('vend_activo') !== '1' || !vendDisponible()) return;
   clearTimeout(vendPubTimer);
   vendPubTimer = setTimeout(() => { vendPublicar().catch(() => {}); }, 3000);
