@@ -315,6 +315,7 @@
     <div id="menuVista-cuenta" style="display:none;">
       <button id="btnModoOscuro" class="menu-item" style="justify-content:center;" onclick="toggleModoOscuro()">🌙 Modo oscuro</button>
       <button class="menu-item" onclick="abrirCambiarPin(); toggleMenuSistema()"><span>🔐 Usuario y contraseña</span></button>
+<button class="menu-item" onclick="abrirResumenWA(); toggleMenuSistema()"><span>📲 Resumen por WhatsApp<small>Cierre del día automático</small></span></button>
 <button class="menu-item" onclick="cambiarNombreBoleta(); toggleMenuSistema()"><span>🏷️ Nombre de la boleta<small>Lo que dice arriba en tus boletas</small></span></button>
     </div>
   </div>
@@ -1412,10 +1413,93 @@ function cierreDia(){
   h += fila('💰 Ganancia', fmt(r.ganancia), 'color:#27ae60;');
   h += fila('Otros gastos', fmt(r.otros));
   h += fila('Ganancia neta', fmt(r.neta));
-  h += '<button style="' + PERF_BTN_P + '" onclick="cierreDiaWhatsApp()">📲 Enviar por WhatsApp</button>';
+  const auto = !modoEspejo && cierreWAListo();
+  if(auto){
+    h += '<p id="cierreWAEstado" style="font-size:13px;margin:12px 0 0;padding:10px;border-radius:10px;background:var(--bg);"></p>';
+    h += '<button style="' + PERF_BTN + '" onclick="cierreWAReenviar()">🔁 Reenviar a mi WhatsApp</button>';
+  } else if(!modoEspejo){
+    h += '<p style="font-size:12px;color:var(--text-secondary);margin:12px 0 0;">💡 Podés hacer que este resumen te llegue solo a tu WhatsApp.</p>';
+    h += '<button style="' + PERF_BTN + '" onclick="abrirResumenWA()">📲 Configurar envío automático</button>';
+  }
+  h += '<button style="' + (auto ? PERF_BTN : PERF_BTN_P) + '" onclick="cierreDiaWhatsApp()">📲 Enviar por WhatsApp (a mano)</button>';
   h += '<button style="' + PERF_BTN + '" onclick="cierreDiaCopiar()">📋 Copiar resumen</button>';
   perfOverlay(h);
+  if(auto) cierreWAAuto(window._cierreTxt);
 }
+// ---------- Resumen del día automático por WhatsApp (CallMeBot) ----------
+const CMB_BOT = '34623786449';
+function cierreWAConfig(){ try { return JSON.parse(localStorage.getItem('cierre_wa_v1') || 'null'); } catch(e) { return null; } }
+function cierreWAListo(){ const c = cierreWAConfig(); return !!(c && c.tel && c.key && c.auto !== false); }
+async function cierreWAEnviar(texto){
+  const c = cierreWAConfig();
+  if(!c || !c.tel || !c.key) throw new Error('Falta configurar el envío');
+  const url = 'https://api.callmebot.com/whatsapp.php?phone=' + encodeURIComponent(c.tel) + '&text=' + encodeURIComponent(texto) + '&apikey=' + encodeURIComponent(c.key);
+  await fetch(url, { mode: 'no-cors', cache: 'no-store' });
+}
+async function cierreWAAuto(texto, forzar){
+  const el = () => document.getElementById('cierreWAEstado');
+  let ult = null; try { ult = JSON.parse(localStorage.getItem('cierre_wa_ultimo') || 'null'); } catch(e) {}
+  if(!forzar && ult && ult.txt === texto && Date.now() - ult.t < 120000){
+    if(el()) el().textContent = '✅ Ya se envió hace un momento a tu WhatsApp.';
+    return;
+  }
+  if(el()) el().textContent = '⏳ Enviando a tu WhatsApp…';
+  try {
+    await cierreWAEnviar(texto);
+    localStorage.setItem('cierre_wa_ultimo', JSON.stringify({ txt: texto, t: Date.now() }));
+    if(el()) el().textContent = '✅ Enviado. Te llega a tu WhatsApp en unos segundos.';
+  } catch(e) {
+    if(el()) el().textContent = '⚠️ No se pudo enviar (¿sin internet?). Usá el botón de abajo para mandarlo a mano.';
+  }
+}
+function cierreWAReenviar(){ cierreWAAuto(window._cierreTxt || '', true); }
+function abrirResumenWA(){
+  const c = cierreWAConfig() || {};
+  const inp = 'width:100%;box-sizing:border-box;padding:12px;border-radius:10px;border:1px solid var(--border);background:var(--bg);color:inherit;font-size:16px;margin-top:6px;';
+  let h = perfTitulo('📲 Resumen por WhatsApp');
+  h += '<p style="font-size:13px;color:var(--text-secondary);margin:0 0 8px;">Al tocar <b>Cerrar el día</b>, el resumen te llega solo a tu WhatsApp. Se configura una sola vez.</p>';
+  h += '<div style="font-size:13px;margin-bottom:6px;"><b>Paso 1.</b> Tocá el botón, se abre WhatsApp con un mensaje ya escrito: enviáselo al bot.</div>';
+  h += '<a href="https://wa.me/' + CMB_BOT + '?text=' + encodeURIComponent('I allow callmebot to send me messages') + '" target="_blank" style="' + PERF_BTN + 'text-align:center;text-decoration:none;box-sizing:border-box;">💬 Abrir chat con el bot</a>';
+  h += '<div style="font-size:13px;margin:10px 0 0;"><b>Paso 2.</b> En unos minutos el bot te responde con tu clave. Si no llega en 2 minutos, probá de nuevo dentro de 24 horas.</div>';
+  h += '<div style="font-size:13px;margin:10px 0 0;"><b>Paso 3.</b> Completá tu número y esa clave:</div>';
+  h += '<input id="waTel" placeholder="Tu número: +5491122334455" inputmode="tel" value="' + perfEsc(c.tel || '') + '" style="' + inp + '">';
+  h += '<input id="waKey" placeholder="Clave que te mandó el bot" inputmode="numeric" value="' + perfEsc(c.key || '') + '" style="' + inp + '">';
+  h += '<label style="display:flex;align-items:center;gap:8px;font-size:14px;margin-top:10px;"><input id="waAuto" type="checkbox" ' + (c.auto === false ? '' : 'checked') + ' style="width:20px;height:20px;"> Enviar solo al tocar Cerrar el día</label>';
+  h += '<button style="' + PERF_BTN_P + '" onclick="guardarResumenWA()">Guardar</button>';
+  h += '<button style="' + PERF_BTN + '" onclick="probarResumenWA()">✉️ Enviar mensaje de prueba</button>';
+  if(c.tel) h += '<button style="' + PERF_BTN + 'color:#e74c3c;" onclick="quitarResumenWA()">Quitar configuración</button>';
+  h += '<p style="font-size:11px;color:var(--text-muted);margin:10px 0 0;">CallMeBot es un servicio gratuito de terceros (uso personal). Tus números del día pasan por sus servidores y no se puede confirmar la entrega desde la app. Si el número del bot cambió, está en callmebot.com.</p>';
+  perfOverlay(h);
+}
+function leerResumenWA(){
+  let tel = (document.getElementById('waTel').value || '').replace(/[^\d+]/g, '');
+  const key = (document.getElementById('waKey').value || '').trim();
+  if(tel && tel[0] !== '+') tel = '+' + tel;
+  if(!/^\+\d{8,15}$/.test(tel)){ perfToast('Poné tu número con el código de país, ej: +5491122334455'); return null; }
+  if(!/^[A-Za-z0-9]{4,24}$/.test(key)){ perfToast('Falta la clave que te mandó el bot'); return null; }
+  return { tel, key, auto: document.getElementById('waAuto').checked };
+}
+function guardarResumenWA(){
+  const c = leerResumenWA(); if(!c) return;
+  localStorage.setItem('cierre_wa_v1', JSON.stringify(c));
+  perfToast('✅ Guardado');
+  perfCerrar();
+}
+async function probarResumenWA(){
+  const c = leerResumenWA(); if(!c) return;
+  localStorage.setItem('cierre_wa_v1', JSON.stringify(c));
+  try {
+    await cierreWAEnviar('✅ Prueba de 70 Veces 7: si ves este mensaje, el resumen automático funciona.');
+    perfToast('Enviado. Fijate en tu WhatsApp en unos segundos.');
+  } catch(e) { perfToast('No se pudo enviar (¿sin internet?)'); }
+}
+function quitarResumenWA(){
+  if(!confirm('¿Quitar el envío automático?')) return;
+  localStorage.removeItem('cierre_wa_v1');
+  perfToast('Quitado');
+  perfCerrar();
+}
+
 function cierreDiaWhatsApp(){ window.open('https://wa.me/?text=' + encodeURIComponent(window._cierreTxt || ''), '_blank'); }
 function cierreDiaCopiar(){
   try { navigator.clipboard.writeText(window._cierreTxt || ''); perfToast('Resumen copiado'); } catch(e) { perfToast('No se pudo copiar'); }
