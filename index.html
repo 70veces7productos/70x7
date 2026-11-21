@@ -315,6 +315,7 @@
     <div id="menuVista-cuenta" style="display:none;">
       <button id="btnModoOscuro" class="menu-item" style="justify-content:center;" onclick="toggleModoOscuro()">🌙 Modo oscuro</button>
       <button class="menu-item" onclick="abrirCambiarPin(); toggleMenuSistema()"><span>🔐 Usuario y contraseña</span></button>
+<button class="menu-item" onclick="cambiarNombreBoleta(); toggleMenuSistema()"><span>🏷️ Nombre de la boleta<small>Lo que dice arriba en tus boletas</small></span></button>
     </div>
   </div>
 
@@ -512,7 +513,7 @@
     <button onclick="volverAClientes()" style="margin-bottom:1rem;">&larr; Volver</button>
     <div class="card">
       <p style="font-weight:600; margin:0 0 4px;" id="boletaClienteNombre"></p>
-      <p style="font-size:12px; color:var(--text-muted); margin:0;">Boleta 70 Veces 7</p>
+      <p style="font-size:12px; color:var(--text-muted); margin:0;">Boleta <span class="nombreBoletaTxt">70 Veces 7</span></p>
     </div>
     <div id="boletaItems"></div>
     <button onclick="addBoletaItem()" style="width:100%; margin-bottom:1rem;">+ Agregar producto</button>
@@ -1049,7 +1050,7 @@ function renderBars(pIng, pGas, ing, gas){
 }
 
 // ================= Perfiles vinculados (el dueño ve, solo lectura, el perfil de quien aceptó compartirlo) =================
-const PERF_BLOQ = new Set(['abrirAgregar','abrirBoleta','abrirCatalogo','abrirCambiarPin','abrirStock','stockSetMin','abrirVentasVend','abrirCodigoSync','abrirConfiguracionSync','abrirPerfiles','abrirCompartir','addBoletaItem','addCliente','addCompra','addMovimiento','agregarProducto','ajustarStock','anularMov','borrarBoletaGuardada','borrarEmpleado','cobrarDesdeCobranza','confirmarCambiarPin','confirmarPagoDeuda','crearEmpleado','delBoletaItem','delCliente','delMovimiento','delProducto','descargarBackup','editarCliente','elegirFotoProducto','empAddLinea','empDelLinea','empDeshacer','empGuardar','enviarBoleta','guardarEdicionCliente','guardarMensajeCobranza','guardarMetasDueno','ignorarRecuperarClientes','liberarEspacioManual','marcarDeudaBoleta','marcarPagado','marcarVisitado','marcarVisitadoBoleta','metasCancelar','metasCopiarAnterior','metasEditar','metasGuardarEmpleado','metasQuitar','pagarDeudaCliente','quitarFotoProducto','recuperarClientes','resetClaveEmpleado','toggleSincronizacion','vdAbrirBoleta','vdAbrirCobro','vdAddFila','vdCargar','vdDelFila','vdGuardarBoleta','vdRegistrarCobro','vdVisitado','vendAceptar','vendAceptarTodas','vendPublicarManual','vendRechazar']);
+const PERF_BLOQ = new Set(['abrirAgregar','abrirBoleta','abrirCatalogo','abrirCambiarPin','abrirStock','stockSetMin','cambiarNombreBoleta','abrirVentasVend','abrirCodigoSync','abrirConfiguracionSync','abrirPerfiles','abrirCompartir','addBoletaItem','addCliente','addCompra','addMovimiento','agregarProducto','ajustarStock','anularMov','borrarBoletaGuardada','borrarEmpleado','cobrarDesdeCobranza','confirmarCambiarPin','confirmarPagoDeuda','crearEmpleado','delBoletaItem','delCliente','delMovimiento','delProducto','descargarBackup','editarCliente','elegirFotoProducto','empAddLinea','empDelLinea','empDeshacer','empGuardar','enviarBoleta','guardarEdicionCliente','guardarMensajeCobranza','guardarMetasDueno','ignorarRecuperarClientes','liberarEspacioManual','marcarDeudaBoleta','marcarPagado','marcarVisitado','marcarVisitadoBoleta','metasCancelar','metasCopiarAnterior','metasEditar','metasGuardarEmpleado','metasQuitar','pagarDeudaCliente','quitarFotoProducto','recuperarClientes','resetClaveEmpleado','toggleSincronizacion','vdAbrirBoleta','vdAbrirCobro','vdAddFila','vdCargar','vdDelFila','vdGuardarBoleta','vdRegistrarCobro','vdVisitado','vendAceptar','vendAceptarTodas','vendPublicarManual','vendRechazar']);
 
 // Mientras se mira otro perfil, nada se escribe en el teléfono del dueño
 const _setItemOrig = Storage.prototype.setItem;
@@ -1553,6 +1554,34 @@ function imprimirRanking(){
   }
 }
 
+// ---------- Nombre que aparece en la boleta ----------
+function nombreBoleta(){
+  const n = (store && store.nombreBoleta) ? String(store.nombreBoleta).trim() : '';
+  return n || '70 Veces 7';
+}
+function fillNombreBoleta(ctx, x, y, maxW){
+  const t = nombreBoleta();
+  let tam = parseInt((ctx.font.match(/(\d+)px/) || [0, 34])[1], 10) || 34;
+  while(ctx.measureText(t).width > maxW && tam > 14){
+    tam -= 2;
+    ctx.font = ctx.font.replace(/\d+px/, tam + 'px');
+  }
+  ctx.fillText(t, x, y);
+}
+function aplicarNombreBoleta(){
+  document.querySelectorAll('.nombreBoletaTxt').forEach(el => { el.textContent = nombreBoleta(); });
+}
+function cambiarNombreBoleta(){
+  const actual = (store.nombreBoleta || '').trim();
+  const v = prompt('Nombre que aparece arriba en tus boletas (máx. 24 letras).\nDejalo vacío para volver a "70 Veces 7".', actual || nombreBoleta());
+  if(v === null) return;
+  const nuevo = v.trim().slice(0, 24);
+  if(nuevo) store.nombreBoleta = nuevo; else delete store.nombreBoleta;
+  saveMov();
+  aplicarNombreBoleta();
+  alert('Listo. Las próximas boletas dicen: ' + nombreBoleta() + '\n(Las boletas que ya guardaste no cambian.)');
+}
+
 function renderFinanzas(){
   asegurarDias();
   const items = store[currentCat][currentKey] || [];
@@ -1634,6 +1663,7 @@ function renderFinanzas(){
   renderDia();
   renderStockAlertas();
   stockAlertasRefrescar();
+  aplicarNombreBoleta();
   renderCompras();
 
   // Mostrar/ocultar sección de ganancia por producto
@@ -2044,7 +2074,7 @@ function generarImagenBoletaPorCliente(canvas, cliente, validItems, total){
   ctx.fillStyle = '#534ab7';
   ctx.font = 'bold 48px Arial';
   ctx.textAlign = 'left';
-  ctx.fillText('70 Veces 7', 50, 50);
+  fillNombreBoleta(ctx, 50, 50, 440);
   
   // Boleta número - derecha
   ctx.fillStyle = '#333333';
@@ -2514,7 +2544,7 @@ function generarImagenBoleta(validItems, total){
   // Marca
   ctx.fillStyle = '#534AB7';
   ctx.font = 'bold 34px sans-serif';
-  ctx.fillText('70 Veces 7', 40, 55);
+  fillNombreBoleta(ctx, 40, 55, 440);
   ctx.fillStyle = '#6b6a62';
   ctx.font = '14px sans-serif';
   ctx.fillText('Snacks artesanales - Industria Argentina', 40, 78);
@@ -2589,7 +2619,7 @@ function generarImagenBoleta(validItems, total){
 function abrirChatWhatsapp(){
   if(!boletaCliente) return;
   const tel = normalizarTelefonoAR(boletaCliente.telefono);
-  const msg = encodeURIComponent('Hola ' + boletaCliente.nombre + ', te comparto la boleta de 70 Veces 7.');
+  const msg = encodeURIComponent('Hola ' + boletaCliente.nombre + ', te comparto la boleta de ' + nombreBoleta() + '.');
   
   // Intenta protocolo nativo primero
   const urlNativa = `whatsapp://send?phone=${tel}&text=${msg}`;
@@ -2846,7 +2876,7 @@ function enviarBoleta(){
         const file = new File([blob], fileName, { type: 'image/png' });
         
         if(navigator.canShare && navigator.canShare({ files: [file] })){
-          navigator.share({ files: [file], title: 'Boleta 70 Veces 7' }).catch(e => {
+          navigator.share({ files: [file], title: 'Boleta ' + nombreBoleta() }).catch(e => {
             console.log('Share cancelado:', e);
           });
         } else {
@@ -5217,7 +5247,7 @@ function vdDibujarBoleta(canvas, cli, items, total, nro, metodo) {
   canvas.width = W; canvas.height = alto;
   const ctx = canvas.getContext('2d');
   ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, alto);
-  ctx.textAlign = 'left'; ctx.fillStyle = '#534ab7'; ctx.font = 'bold 54px Arial'; ctx.fillText('70 Veces 7', M, 80);
+  ctx.textAlign = 'left'; ctx.fillStyle = '#534ab7'; ctx.font = 'bold 54px Arial'; fillNombreBoleta(ctx, M, 80, 720);
   ctx.fillStyle = '#666'; ctx.font = '24px Arial'; ctx.fillText('Snacks artesanales - Industria Argentina', M, 118);
   ctx.fillStyle = '#222'; ctx.font = 'bold 30px Arial'; ctx.fillText('Boleta ' + nro, M, 180);
   ctx.fillStyle = '#666'; ctx.font = '24px Arial'; ctx.fillText(new Date().toLocaleDateString('es-AR'), M, 214);
