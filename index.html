@@ -165,7 +165,12 @@
       <div id="empMsg" style="display:none; padding:12px; border-radius:10px; font-size:14px; margin-top:12px;"></div>
     </div>
 
-    <div id="empMetaCard" style="display:none; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:16px; margin-bottom:14px;">
+    <div id="empCuentaCard" style="display:none; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:16px; margin-bottom:14px;">
+<h2 style="font-size:15px; margin:0 0 10px;">💵 Mi cuenta</h2>
+<div id="empCuentaContenido"></div>
+</div>
+
+<div id="empMetaCard" style="display:none; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:16px; margin-bottom:14px;">
       <h2 id="empMetaTitulo" style="font-size:15px; margin:0 0 10px;">🎯 Mi meta</h2>
       <div id="empMetaContenido"></div>
     </div>
@@ -186,6 +191,7 @@
       <div id="vdEstadoRed" style="font-size:11px; color:var(--text-muted);"></div>
     </div>
     <div style="display:flex; gap:4px;">
+      <button onclick="vdAbrirCuenta()" style="background:none; border:none; color:var(--accent); font-size:13px; font-weight:600; cursor:pointer; padding:6px 8px;">💵 Mi cuenta</button>
       <button onclick="vdCargar(true)" style="background:none; border:none; color:var(--accent); font-size:13px; font-weight:600; cursor:pointer; padding:6px 8px;">↻ Actualizar</button>
       <button onclick="empSalir()" style="background:none; border:none; color:var(--text-secondary); font-size:14px; font-weight:600; cursor:pointer; padding:6px 8px;">Salir</button>
     </div>
@@ -1675,7 +1681,7 @@ function empNombre(u){ const e = stockEstado || {}; return (e.empleados && e.emp
 function empResumenTxt(u){
   const s = empSaldo(u), m = empMercaPend(u), p = [];
   if(s > 0) p.push('<span style="color:#e74c3c;">Le debés ' + fmt(s) + '</span>');
-  else if(s < 0) p.push('<span style="color:#2980b9;">A favor ' + fmt(-s) + '</span>');
+  else if(s < 0) p.push('<span style="color:#2980b9;">Te debe ' + fmt(-s) + '</span>');
   if(m > 0) p.push('<span style="color:#d35400;">Debe ' + m + ' u.</span>');
   return p.length ? '<span style="display:block;font-size:11px;margin-top:2px;">' + p.join(' · ') + '</span>' : '';
 }
@@ -1729,13 +1735,13 @@ function abrirPagosEmp(u){
   const fch = t => new Date(t).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' });
   let h = perfTitulo('💵 ' + perfEsc(nom));
   const col = saldo > 0 ? '#e74c3c' : (saldo < 0 ? '#2980b9' : '#27ae60');
-  const txt = saldo > 0 ? 'Le debés ' + fmt(saldo) : (saldo < 0 ? 'Le pagaste de más: ' + fmt(-saldo) : 'Está al día');
+  const txt = saldo > 0 ? 'Le debés ' + fmt(saldo) : (saldo < 0 ? 'Te debe ' + fmt(-saldo) : 'Está al día');
   h += '<div style="padding:12px;border-radius:10px;background:var(--bg);margin-bottom:8px;"><div style="font-size:20px;font-weight:700;color:' + col + ';">' + txt + '</div><div style="font-size:12px;color:var(--text-secondary);margin-top:2px;">Pagado este mes: ' + fmt(pagadoMes) + '</div></div>';
-  h += '<div style="display:flex;gap:8px;"><button style="' + PERF_BTN + 'margin-top:0;" onclick="pagoForm(\'' + u + '\',\'deuda\')">➕ Sumar lo que le debo</button><button style="' + PERF_BTN_P + 'margin-top:0;" onclick="pagoForm(\'' + u + '\',\'pago\')">💸 Registrar pago</button></div>';
+  h += '<div style="display:flex;gap:8px;"><button style="' + PERF_BTN + 'margin-top:0;" onclick="pagoForm(\'' + u + '\',\'deuda\')">➕ Sumar lo que le debo</button><button style="' + PERF_BTN_P + 'margin-top:0;" onclick="pagoForm(\'' + u + '\',\'pago\')">💸 Registrar pago</button></div><button style="' + PERF_BTN + '" onclick="pagoForm(\'' + u + '\',\'cargo\')">➖ Me debe plata (adelanto o faltante)</button>';
   if(pagos.length){
     h += '<p style="margin:14px 0 4px;font-weight:600;font-size:14px;">Movimientos</p>';
     pagos.slice(0, 15).forEach(x => {
-      h += '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 0;border-top:1px solid var(--border);font-size:13px;"><div><div>' + (x.tipo === 'pago' ? '💸 Pago' + (x.metodo ? ' (' + x.metodo + ')' : '') : '➕ Se le debe') + '</div><div style="font-size:11px;color:var(--text-secondary);">' + fch(x.t) + (x.nota ? ' · ' + perfEsc(x.nota) : '') + '</div></div><div style="display:flex;align-items:center;gap:6px;"><b style="color:' + (x.tipo === 'pago' ? '#27ae60' : '#e74c3c') + ';">' + fmt(x.monto) + '</b><button onclick="pagoBorrar(\'' + u + '\',\'' + x.id + '\')" style="background:none;border:1px solid var(--border);color:inherit;border-radius:8px;padding:4px 8px;">✕</button></div></div>';
+      h += '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 0;border-top:1px solid var(--border);font-size:13px;"><div><div>' + (x.tipo === 'pago' ? '💸 Pago' + (x.metodo ? ' (' + x.metodo + ')' : '') : (x.tipo === 'cargo' ? '➖ Te debe' : '➕ Se le debe')) + '</div><div style="font-size:11px;color:var(--text-secondary);">' + fch(x.t) + (x.nota ? ' · ' + perfEsc(x.nota) : '') + '</div></div><div style="display:flex;align-items:center;gap:6px;"><b style="color:' + (x.tipo === 'deuda' ? '#e74c3c' : '#27ae60') + ';">' + fmt(x.monto) + '</b><button onclick="pagoBorrar(\'' + u + '\',\'' + x.id + '\')" style="background:none;border:1px solid var(--border);color:inherit;border-radius:8px;padding:4px 8px;">✕</button></div></div>';
     });
   }
   // Mercadería
@@ -1753,9 +1759,9 @@ function abrirPagosEmp(u){
 }
 function pagoForm(u, tipo){
   const inp = 'width:100%;box-sizing:border-box;padding:12px;border-radius:10px;border:1px solid var(--border);background:var(--bg);color:inherit;font-size:16px;margin-top:8px;';
-  let h = perfTitulo((tipo === 'pago' ? '💸 Registrar pago' : '➕ Sumar lo que le debo') + ' · ' + perfEsc(empNombre(u)));
+  let h = perfTitulo((tipo === 'pago' ? '💸 Registrar pago' : (tipo === 'cargo' ? '➖ Me debe plata' : '➕ Sumar lo que le debo')) + ' · ' + perfEsc(empNombre(u)));
   h += '<input id="pgMonto" type="number" inputmode="numeric" placeholder="Monto en pesos" style="' + inp + '">';
-  h += '<input id="pgNota" placeholder="' + (tipo === 'pago' ? 'Nota (ej: semana del 10)' : 'Nota (ej: sueldo de la quincena)') + '" style="' + inp + '">';
+  h += '<input id="pgNota" placeholder="' + (tipo === 'pago' ? 'Nota (ej: semana del 10)' : (tipo === 'cargo' ? 'Nota (ej: adelanto, faltante de caja)' : 'Nota (ej: sueldo de la quincena)')) + '" style="' + inp + '">';
   if(tipo === 'pago'){
     h += '<select id="pgMetodo" style="' + inp + '"><option value="efectivo">Pagué en efectivo</option><option value="transferencia">Pagué por transferencia</option></select>';
     h += '<label style="display:flex;align-items:center;gap:8px;font-size:14px;margin-top:12px;"><input id="pgGasto" type="checkbox" checked style="width:20px;height:20px;"> Registrar también como gasto del negocio</label>';
@@ -1781,6 +1787,7 @@ function pagoGuardar(u, tipo){
   (pagosStore()[u] = pagosStore()[u] || []).push(reg);
   saveMov();
   if(reg.gasto){ try { renderFinanzas(); } catch(e) {} }
+  cuentasPublicarDebounced();
   stockReDibujar();
   abrirPagosEmp(u);
 }
@@ -1789,7 +1796,7 @@ function pagoBorrar(u, id){
   if(!x) return;
   if(!confirm('¿Borrar este movimiento de ' + fmt(x.monto) + '?' + (x.gasto ? '\n(El gasto que se registró en el negocio no se borra solo: borralo desde la lista de gastos si hace falta.)' : ''))) return;
   pagosStore()[u] = pagosStore()[u].filter(z => z.id !== id);
-  saveMov(); stockReDibujar(); abrirPagosEmp(u);
+  saveMov(); cuentasPublicarDebounced(); stockReDibujar(); abrirPagosEmp(u);
 }
 function mercaForm(u){
   const inp = 'width:100%;box-sizing:border-box;padding:12px;border-radius:10px;border:1px solid var(--border);background:var(--bg);color:inherit;font-size:16px;margin-top:8px;';
@@ -1807,7 +1814,7 @@ function mercaGuardar(u){
   if(!prod){ perfToast('Elegí el producto'); return; }
   if(!cant || cant < 1){ perfToast('Poné una cantidad mayor a 0'); return; }
   (mercaStore()[u] = mercaStore()[u] || []).push({ id: nuevoIdLocal(), t: Date.now(), prod, cant, rec: 0, nota: (document.getElementById('mcNota').value || '').trim().slice(0, 60) });
-  saveMov(); stockReDibujar(); abrirPagosEmp(u);
+  saveMov(); cuentasPublicarDebounced(); stockReDibujar(); abrirPagosEmp(u);
 }
 function mercaItem(u, id){ return (mercaStore()[u] || []).find(z => z.id === id); }
 function mercaRecupero(u, id){
@@ -1818,18 +1825,82 @@ function mercaRecupero(u, id){
   const n = Math.round(Number(v));
   if(!n || n < 1){ alert('Poné un número mayor a 0'); return; }
   x.rec = Math.min(x.cant, (x.rec || 0) + n);
-  saveMov(); stockReDibujar(); abrirPagosEmp(u);
+  saveMov(); cuentasPublicarDebounced(); stockReDibujar(); abrirPagosEmp(u);
 }
 function mercaSaldar(u, id){
   const x = mercaItem(u, id); if(!x) return;
   if(!confirm('¿Dar por recuperadas las ' + (x.cant - (x.rec || 0)) + ' unidades que faltan?')) return;
   x.rec = x.cant;
-  saveMov(); stockReDibujar(); abrirPagosEmp(u);
+  saveMov(); cuentasPublicarDebounced(); stockReDibujar(); abrirPagosEmp(u);
 }
 function mercaBorrar(u, id){
   if(!confirm('¿Borrar esta anotación?')) return;
   mercaStore()[u] = (mercaStore()[u] || []).filter(z => z.id !== id);
-  saveMov(); stockReDibujar(); abrirPagosEmp(u);
+  saveMov(); cuentasPublicarDebounced(); stockReDibujar(); abrirPagosEmp(u);
+}
+
+
+// ---------- Publicar la cuenta de cada empleado para que la vea en su pantalla ----------
+function cuentasArmar(){
+  const mes = ymKey(new Date());
+  const us = new Set([].concat(Object.keys(store.pagosEmp || {}), Object.keys(store.mercaDeuda || {})));
+  const out = {};
+  us.forEach(u => {
+    const pagos = ((store.pagosEmp || {})[u] || []).slice().sort((a, b) => b.t - a.t);
+    const merca = ((store.mercaDeuda || {})[u] || []).slice().sort((a, b) => b.t - a.t);
+    const pend = merca.filter(x => (x.rec || 0) < x.cant), hechas = merca.filter(x => (x.rec || 0) >= x.cant).slice(0, 5);
+    out[u] = {
+      saldo: empSaldo(u),
+      pagadoMes: pagos.filter(x => x.tipo === 'pago' && ymKey(new Date(x.t)) === mes).reduce((t, x) => t + x.monto, 0),
+      movs: pagos.slice(0, 30).map(x => ({ t: x.t, tipo: x.tipo, monto: x.monto, nota: x.nota || '', metodo: x.metodo || '' })),
+      merca: pend.concat(hechas).map(x => ({ t: x.t, prod: x.prod, nombre: nombreProdStock(x.prod), cant: x.cant, rec: x.rec || 0, nota: x.nota || '' }))
+    };
+  });
+  return out;
+}
+let _cuentasTimer = null;
+function cuentasPublicarDebounced(){
+  if(modoEspejo || !metasStockDisponible()) return;
+  clearTimeout(_cuentasTimer);
+  _cuentasTimer = setTimeout(async () => { try { await stockLlamar('publicar_cuentas', { cuentas: cuentasArmar() }); } catch(e) {} }, 1500);
+}
+
+// ---------- Lo que ve el empleado o vendedor: su propia cuenta ----------
+function cuentaEmpleadoHtml(c){
+  const fch = t => new Date(t).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' });
+  const col = c.saldo > 0 ? '#27ae60' : (c.saldo < 0 ? '#e74c3c' : 'var(--text)');
+  const txt = c.saldo > 0 ? 'Te deben ' + fmt(c.saldo) : (c.saldo < 0 ? 'Debés ' + fmt(-c.saldo) : 'Estás al día');
+  let h = '<div style="padding:12px;border-radius:10px;background:var(--bg);"><div style="font-size:20px;font-weight:700;color:' + col + ';">' + txt + '</div><div style="font-size:12px;color:var(--text-secondary);margin-top:2px;">Cobrado este mes: ' + fmt(c.pagadoMes || 0) + '</div></div>';
+  const movs = (c.movs || []).slice(0, 8);
+  if(movs.length){
+    h += '<p style="margin:12px 0 2px;font-weight:600;font-size:14px;">Movimientos</p>';
+    movs.forEach(x => {
+      const lbl = x.tipo === 'pago' ? '💸 Te pagaron' : (x.tipo === 'cargo' ? '➖ Debés' : '➕ Se te debe');
+      const cl = x.tipo === 'pago' ? '#27ae60' : (x.tipo === 'cargo' ? '#e74c3c' : '#2980b9');
+      h += '<div style="display:flex;justify-content:space-between;gap:8px;padding:7px 0;border-top:1px solid var(--border);font-size:13px;"><div><div>' + lbl + (x.metodo ? ' (' + perfEsc(x.metodo) + ')' : '') + '</div><div style="font-size:11px;color:var(--text-secondary);">' + fch(x.t) + (x.nota ? ' · ' + perfEsc(x.nota) : '') + '</div></div><b style="color:' + cl + ';">' + fmt(x.monto) + '</b></div>';
+    });
+  }
+  const pend = (c.merca || []).filter(x => (x.rec || 0) < x.cant);
+  if(pend.length){
+    h += '<p style="margin:14px 0 2px;font-weight:600;font-size:14px;">📦 Mercadería a recuperar</p>';
+    pend.forEach(x => {
+      h += '<div style="padding:7px 0;border-top:1px solid var(--border);font-size:13px;"><div style="display:flex;justify-content:space-between;gap:8px;"><b>' + perfEsc(x.nombre || x.prod) + '</b><b style="color:#d35400;">faltan ' + (x.cant - (x.rec || 0)) + '</b></div><div style="font-size:11px;color:var(--text-secondary);">Debías ' + x.cant + ' · recuperaste ' + (x.rec || 0) + ' · desde ' + fch(x.t) + (x.nota ? ' · ' + perfEsc(x.nota) : '') + '</div></div>';
+    });
+  }
+  return h;
+}
+function cuentaVacia(c){ return !c || (!c.saldo && !(c.movs || []).length && !(c.merca || []).filter(x => (x.rec || 0) < x.cant).length); }
+function empRenderCuenta(){
+  const card = document.getElementById('empCuentaCard');
+  if(!card) return;
+  const c = empEstado && empEstado.cuenta;
+  if(cuentaVacia(c)){ card.style.display = 'none'; return; }
+  document.getElementById('empCuentaContenido').innerHTML = cuentaEmpleadoHtml(c);
+  card.style.display = 'block';
+}
+function vdAbrirCuenta(){
+  const c = vdEstado && vdEstado.cuenta;
+  perfOverlay(perfTitulo('💵 Mi cuenta') + (cuentaVacia(c) ? '<p style="font-size:14px;color:var(--text-secondary);">Todavía no hay movimientos en tu cuenta.</p>' : cuentaEmpleadoHtml(c)) + '<button style="' + PERF_BTN + '" onclick="perfCerrar()">Cerrar</button>');
 }
 
 function renderFinanzas(){
@@ -3756,6 +3827,7 @@ async function cargarStock() {
   try { localStorage.setItem('stock_cache_v1', JSON.stringify({ t: Date.now(), stock: stockEstado.stock || {} })); } catch(e) {}
   renderStock();
   renderStockAlertas();
+  cuentasPublicarDebounced();
 }
 
 function nombreProdStock(id) {
@@ -5255,7 +5327,7 @@ async function vdCargar(manual) {
   try {
     await vdFlush();
     const r = await empApi('v_estado');
-    vdEstado = { nombre: r.nombre, publicado: r.publicado };
+    vdEstado = { nombre: r.nombre, publicado: r.publicado, cuenta: r.cuenta || null };
     localStorage.setItem('vend_cache_v1', JSON.stringify(vdEstado));
     try { const m = await empApi('v_mis_envios'); vdEnvios = m.envios || []; } catch(e) {}
     if(red) red.textContent = r.publicado ? 'Lista actualizada ' + new Date(r.publicado.t).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
@@ -5664,6 +5736,7 @@ function empRender() {
   document.getElementById('empFecha').textContent = new Date().toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' });
 
   empRenderMeta();
+  empRenderCuenta();
   if(!empLineas.length) empLineas.push(empNuevaLinea());
   empRenderLineas();
 
