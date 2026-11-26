@@ -1686,8 +1686,20 @@ function stockReDibujar(){
 }
 
 // ---------- Totales al pie del stock ----------
+function stockValorTxt(id, n){
+  const p = productos.find(x => x.id === id);
+  if(!p || n <= 0 || !(Number(p.precio) > 0)) return '';
+  return '<span style="display:block;font-size:11px;color:var(--text-secondary);">' + fmt(n * Number(p.precio)) + '</span>';
+}
 function stockTotalesHtml(ids, e){
-  const enStock = ids.reduce((t, id) => t + (e.stock[id] || 0), 0);
+  const enStock = ids.reduce((t, id) => t + Math.max(0, e.stock[id] || 0), 0);
+  let valV = 0, valC = 0, negativos = 0;
+  ids.forEach(id => {
+    const n = e.stock[id] || 0;
+    if(n < 0){ negativos++; return; }
+    const p = productos.find(x => x.id === id);
+    if(p){ valV += n * (Number(p.precio) || 0); valC += n * (Number(p.costo) || 0); }
+  });
   const mes = ymKey(new Date());
   const todos = store.ventas || {};
   const v = todos[mes] || { total: 0, prod: {} };
@@ -1698,6 +1710,9 @@ function stockTotalesHtml(ids, e){
   const fila = (a, b) => '<div style="display:flex;justify-content:space-between;padding:5px 0;font-size:14px;"><span>' + a + '</span><b>' + b + '</b></div>';
   return '<div style="margin-top:10px;padding-top:8px;border-top:2px solid var(--border);">' +
     fila('📦 Total en stock', enStock + ' u.') +
+    fila('💰 Valor a precio de venta', '<span style="font-size:17px;">' + fmt(valV) + '</span>') +
+    fila('🏭 Valor a costo', fmt(valC)) +
+    (negativos ? '<p style="margin:2px 0 6px;font-size:12px;color:#e67e22;">⚠️ ' + negativos + ' producto' + (negativos === 1 ? ' tiene' : 's tienen') + ' stock negativo (se cuenta como 0). Corregilo con Ajustar.</p>' : '') +
     fila('🛒 Vendido este mes', (v.total || 0) + ' u.' + (dinero ? ' · ' + fmt(dinero) + (parcial ? '*' : '') : '')) +
     fila('🛒 Vendido en total', histU + ' u.') +
     (dinero && parcial ? '<p style="margin:2px 0 0;font-size:11px;color:var(--text-muted);">* El importe cuenta solo desde que la app guarda el detalle de ventas.</p>' : '') +
@@ -3781,7 +3796,7 @@ function renderStock() {
     ${ids.map(id => {
       const n = e.stock[id] || 0;
       return `<div style="display:flex; justify-content:space-between; align-items:center; gap:8px; padding:7px 0; border-top:1px solid var(--border); font-size:14px;">
-        <span style="flex:1;">${repEsc(nombreProdStock(id))}</span>
+        <span style="flex:1;">${repEsc(nombreProdStock(id))}${stockValorTxt(id, n)}</span>
         ${stockMinTxt(id)}<b style="font-size:17px; color:${stockBajo(id, n) ? '#e74c3c' : 'var(--text)'};">${n}</b>
         <button style="${btn}" onclick="ajustarStock('${id}')">Ajustar</button><button style="${btn}" onclick="stockSetMin('${id}')">Mín.</button>
       </div>`;
