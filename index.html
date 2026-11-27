@@ -202,7 +202,11 @@
       <input id="vdBuscar" type="text" placeholder="Buscar cliente…" oninput="vdRenderClientes()" style="width:100%; padding:12px; font-size:16px; border:2px solid var(--border); border-radius:10px; background:var(--card); color:var(--text); box-sizing:border-box; margin-bottom:10px;">
       <div id="vdListaClientes"></div>
     </div>
+    <div id="vdVistaRuta" style="display:none;">
+      <div id="vdListaRuta"></div>
+    </div>
     <div id="vdVistaMapa" style="display:none;">
+      <div id="vdMapaChips" style="display:flex; gap:8px; margin-bottom:8px;"></div>
       <div id="vdMapaDiv" style="height:58vh; border-radius:12px; overflow:hidden; border:1px solid var(--border); background:var(--card);"></div>
       <div id="vdMapaNota" style="font-size:12px; color:var(--text-secondary); margin-top:8px;"></div>
     </div>
@@ -213,6 +217,7 @@
 
   <div style="display:flex; border-top:1px solid var(--border); background:var(--card); padding-bottom:env(safe-area-inset-bottom, 0px);">
     <button id="vdTab-clientes" onclick="vdIrA('clientes')" style="flex:1; padding:12px 4px; border:none; background:none; font-size:13px; font-weight:700; cursor:pointer;">👥<br>Clientes</button>
+    <button id="vdTab-ruta" onclick="vdIrA('ruta')" style="flex:1; padding:12px 4px; border:none; background:none; font-size:13px; font-weight:700; cursor:pointer;">🗓️<br>Ruta</button>
     <button id="vdTab-mapa" onclick="vdIrA('mapa')" style="flex:1; padding:12px 4px; border:none; background:none; font-size:13px; font-weight:700; cursor:pointer;">🗺️<br>Mapa</button>
     <button id="vdTab-enviados" onclick="vdIrA('enviados')" style="flex:1; padding:12px 4px; border:none; background:none; font-size:13px; font-weight:700; cursor:pointer;">📋<br>Enviados <span id="vdBadgeEnv" style="color:#e67e22;"></span></button>
   </div>
@@ -297,6 +302,7 @@
       <button class="menu-item" onclick="abrirStock(); toggleMenuSistema()"><span>📦 Stock y usuarios<small>Producción, empleados y vendedores</small></span><span class="chev">›</span></button>
       <button class="menu-item" onclick="setTab('negocio'); abrirProductos(); toggleMenuSistema()"><span>🏷️ Productos y catálogo<small>Precios, costos y fotos</small></span><span class="chev">›</span></button>
       <button class="menu-item" onclick="imprimirInforme(); toggleMenuSistema()"><span>🖨️ Informe del mes<small>Para imprimir o guardar</small></span><span class="chev">›</span></button>
+      <button class="menu-item" onclick="abrirRutas(); toggleMenuSistema()"><span>🗺️ Hojas de ruta<small>Clientes por día y por cercanía</small></span><span class="chev">›</span></button>
       <button class="menu-item" onclick="imprimirRanking(); toggleMenuSistema()"><span>🏆 Ranking del mes<small>Productos y clientes que más venden</small></span><span class="chev">›</span></button>
     </div>
 
@@ -1057,7 +1063,7 @@ function renderBars(pIng, pGas, ing, gas){
 }
 
 // ================= Perfiles vinculados (el dueño ve, solo lectura, el perfil de quien aceptó compartirlo) =================
-const PERF_BLOQ = new Set(['abrirAgregar','abrirBoleta','abrirCatalogo','abrirCambiarPin','abrirStock','stockSetMin','abrirPagosEmp','pagoGuardar','pagoBorrar','mercaGuardar','mercaRecupero','mercaSaldar','mercaBorrar','cambiarNombreBoleta','abrirVentasVend','abrirCodigoSync','abrirConfiguracionSync','abrirPerfiles','abrirCompartir','addBoletaItem','addCliente','addCompra','addMovimiento','agregarProducto','ajustarStock','anularMov','borrarBoletaGuardada','borrarEmpleado','cobrarDesdeCobranza','confirmarCambiarPin','confirmarPagoDeuda','crearEmpleado','delBoletaItem','delCliente','delMovimiento','delProducto','descargarBackup','editarCliente','elegirFotoProducto','empAddLinea','empDelLinea','empDeshacer','empGuardar','enviarBoleta','guardarEdicionCliente','guardarMensajeCobranza','guardarMetasDueno','ignorarRecuperarClientes','liberarEspacioManual','marcarDeudaBoleta','marcarPagado','marcarVisitado','marcarVisitadoBoleta','metasCancelar','metasCopiarAnterior','metasEditar','metasGuardarEmpleado','metasQuitar','pagarDeudaCliente','quitarFotoProducto','recuperarClientes','resetClaveEmpleado','toggleSincronizacion','vdAbrirBoleta','vdAbrirCobro','vdAddFila','vdCargar','vdDelFila','vdGuardarBoleta','vdRegistrarCobro','vdVisitado','vendAceptar','vendAceptarTodas','vendPublicarManual','vendRechazar']);
+const PERF_BLOQ = new Set(['abrirAgregar','abrirBoleta','abrirCatalogo','abrirCambiarPin','abrirStock','abrirRutas','stockSetMin','abrirPagosEmp','pagoGuardar','pagoBorrar','mercaGuardar','mercaRecupero','mercaSaldar','mercaBorrar','cambiarNombreBoleta','abrirVentasVend','abrirCodigoSync','abrirConfiguracionSync','abrirPerfiles','abrirCompartir','addBoletaItem','addCliente','addCompra','addMovimiento','agregarProducto','ajustarStock','anularMov','borrarBoletaGuardada','borrarEmpleado','cobrarDesdeCobranza','confirmarCambiarPin','confirmarPagoDeuda','crearEmpleado','delBoletaItem','delCliente','delMovimiento','delProducto','descargarBackup','editarCliente','elegirFotoProducto','empAddLinea','empDelLinea','empDeshacer','empGuardar','enviarBoleta','guardarEdicionCliente','guardarMensajeCobranza','guardarMetasDueno','ignorarRecuperarClientes','liberarEspacioManual','marcarDeudaBoleta','marcarPagado','marcarVisitado','marcarVisitadoBoleta','metasCancelar','metasCopiarAnterior','metasEditar','metasGuardarEmpleado','metasQuitar','pagarDeudaCliente','quitarFotoProducto','recuperarClientes','resetClaveEmpleado','toggleSincronizacion','vdAbrirBoleta','vdAbrirCobro','vdAddFila','vdCargar','vdDelFila','vdGuardarBoleta','vdRegistrarCobro','vdVisitado','vendAceptar','vendAceptarTodas','vendPublicarManual','vendRechazar']);
 
 // Mientras se mira otro perfil, nada se escribe en el teléfono del dueño
 const _setItemOrig = Storage.prototype.setItem;
@@ -1901,6 +1907,300 @@ function empRenderCuenta(){
 function vdAbrirCuenta(){
   const c = vdEstado && vdEstado.cuenta;
   perfOverlay(perfTitulo('💵 Mi cuenta') + (cuentaVacia(c) ? '<p style="font-size:14px;color:var(--text-secondary);">Todavía no hay movimientos en tu cuenta.</p>' : cuentaEmpleadoHtml(c)) + '<button style="' + PERF_BTN + '" onclick="perfCerrar()">Cerrar</button>');
+}
+
+// ================= Hojas de ruta =================
+const DIAS_RUTA = [['lun', 'Lun', 'Lunes'], ['mar', 'Mar', 'Martes'], ['mie', 'Mié', 'Miércoles'], ['jue', 'Jue', 'Jueves'], ['vie', 'Vie', 'Viernes'], ['sab', 'Sáb', 'Sábado'], ['dom', 'Dom', 'Domingo']];
+function diaRutaHoy(){ return ['dom', 'lun', 'mar', 'mie', 'jue', 'vie', 'sab'][new Date().getDay()]; }
+function diaRutaNombre(k){ const d = DIAS_RUTA.find(x => x[0] === k); return d ? d[2] : k; }
+function rutasStore(){ if(!store.rutas) store.rutas = {}; return store.rutas; }
+function rutaDe(q){
+  const r = rutasStore();
+  if(!r[q]) r[q] = {};
+  DIAS_RUTA.forEach(d => { if(!Array.isArray(r[q][d[0]])) r[q][d[0]] = []; });
+  return r[q];
+}
+function geoOk(c){ return !!c && c.lat != null && c.lng != null && !isNaN(Number(c.lat)) && !isNaN(Number(c.lng)); }
+function distKm(a, b){
+  const R = 6371, rad = x => Number(x) * Math.PI / 180;
+  const dLat = rad(b.lat) - rad(a.lat), dLng = rad(b.lng) - rad(a.lng);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+
+// Orden por cercanía: vecino más cercano + mejora 2-opt. Los clientes sin ubicación van al final.
+function dosOpt(r, inicio){
+  let mejora = true, iter = 0;
+  while(mejora && iter++ < 60){
+    mejora = false;
+    for(let i = 0; i < r.length - 1; i++){
+      for(let j = i + 1; j < r.length; j++){
+        const prev = i > 0 ? r[i - 1] : inicio, next = j < r.length - 1 ? r[j + 1] : null;
+        const antes = (prev ? distKm(prev, r[i]) : 0) + (next ? distKm(r[j], next) : 0);
+        const despues = (prev ? distKm(prev, r[j]) : 0) + (next ? distKm(r[i], next) : 0);
+        if(despues + 1e-9 < antes){ r = r.slice(0, i).concat(r.slice(i, j + 1).reverse(), r.slice(j + 1)); mejora = true; }
+      }
+    }
+  }
+  return r;
+}
+function rutaOrdenarIds(ids, inicio){
+  const cs = ids.map(id => clientes.find(c => c.id === id)).filter(Boolean);
+  const con = cs.filter(geoOk), sin = cs.filter(c => !geoOk(c));
+  if(con.length < 2) return con.concat(sin).map(c => c.id);
+  let rest = con.slice(), ruta = [], actual = inicio ? { lat: Number(inicio.lat), lng: Number(inicio.lng) } : null;
+  if(!actual){
+    const cx = rest.reduce((t, c) => t + Number(c.lat), 0) / rest.length, cy = rest.reduce((t, c) => t + Number(c.lng), 0) / rest.length;
+    let mejor = rest[0], md = -1;
+    rest.forEach(c => { const d = distKm(c, { lat: cx, lng: cy }); if(d > md){ md = d; mejor = c; } });
+    ruta.push(mejor); rest = rest.filter(c => c !== mejor); actual = mejor;
+  }
+  while(rest.length){
+    let bi = 0, bd = Infinity;
+    rest.forEach((c, i) => { const d = distKm(actual, c); if(d < bd){ bd = d; bi = i; } });
+    actual = rest.splice(bi, 1)[0]; ruta.push(actual);
+  }
+  ruta = dosOpt(ruta, inicio ? { lat: Number(inicio.lat), lng: Number(inicio.lng) } : null);
+  return ruta.concat(sin).map(c => c.id);
+}
+// Un solo recorrido por cercanía, cortado en partes iguales entre los días elegidos
+function rutaRepartir(ids, dias, inicio){
+  const cs = ids.map(id => clientes.find(c => c.id === id)).filter(Boolean);
+  const con = cs.filter(geoOk).map(c => c.id), sin = cs.filter(c => !geoOk(c)).map(c => c.id);
+  const orden = rutaOrdenarIds(con, inicio);
+  const k = dias.length, out = {};
+  dias.forEach(d => { out[d] = []; });
+  const base = Math.floor(orden.length / k), extra = orden.length % k; let p = 0;
+  dias.forEach((d, i) => { const tam = base + (i < extra ? 1 : 0); out[d] = orden.slice(p, p + tam); p += tam; });
+  dias.forEach(d => { out[d] = rutaOrdenarIds(out[d], null); });
+  sin.forEach((id, i) => { out[dias[i % k]].push(id); });
+  return out;
+}
+function rutaInicio(){
+  return new Promise(res => {
+    if(!navigator.geolocation) return res(null);
+    let listo = false;
+    const t = setTimeout(() => { if(!listo){ listo = true; res(null); } }, 8000);
+    navigator.geolocation.getCurrentPosition(
+      p => { if(listo) return; listo = true; clearTimeout(t); res({ lat: p.coords.latitude, lng: p.coords.longitude }); },
+      () => { if(listo) return; listo = true; clearTimeout(t); res(null); },
+      { timeout: 7000, maximumAge: 60000 });
+  });
+}
+
+// ---------- Pantalla del dueño ----------
+let _rutaQuien = 'yo', _rutaDia = null, _rutaVend = {}, _rutaPub = '', _rutaVista = '', _rutaSel = [], _rutaBusq = '';
+const RT_BTN = 'padding:7px 9px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:inherit;font-size:13px;';
+function rutaNombreQ(){ return _rutaQuien === 'yo' ? 'Mi ruta' : (_rutaVend[_rutaQuien] || _rutaQuien); }
+async function abrirRutas(){
+  if(modoEspejo){ perfToast('Volvé primero a tu perfil'); return; }
+  if(!_rutaDia) _rutaDia = diaRutaHoy();
+  rutaPintar();
+  try {
+    if(metasStockDisponible()){
+      const e = await stockLlamar('estado');
+      _rutaVend = e.vendedores || {};
+      if(_rutaVista === 'lista') rutaPintar();
+    }
+  } catch(err) {}
+}
+function rutaPintar(){
+  _rutaVista = 'lista';
+  const q = _rutaQuien, ruta = rutaDe(q), dia = _rutaDia, ids = ruta[dia];
+  let h = perfTitulo('🗺️ Hojas de ruta');
+  h += '<select onchange="rutaCambiarQuien(this.value)" style="width:100%;box-sizing:border-box;padding:10px;border-radius:10px;border:1px solid var(--border);background:var(--bg);color:inherit;font-size:15px;"><option value="yo"' + (q === 'yo' ? ' selected' : '') + '>Mi ruta</option>' +
+    Object.keys(_rutaVend).map(u => '<option value="' + u + '"' + (q === u ? ' selected' : '') + '>Vendedor: ' + perfEsc(_rutaVend[u]) + '</option>').join('') + '</select>';
+  h += '<div style="display:flex;gap:6px;overflow-x:auto;margin:10px 0;">' + DIAS_RUTA.map(d => {
+    const n = ruta[d[0]].length, act = d[0] === dia;
+    return '<button onclick="rutaDia(\'' + d[0] + '\')" style="flex:0 0 auto;padding:8px 10px;border-radius:10px;border:2px solid ' + (act ? '#534ab7' : 'var(--border)') + ';background:' + (act ? '#534ab7' : 'var(--bg)') + ';color:' + (act ? '#fff' : 'inherit') + ';font-size:13px;font-weight:600;">' + d[1] + (n ? ' · ' + n : '') + '</button>';
+  }).join('') + '</div>';
+  const sinGeo = ids.filter(id => !geoOk(clientes.find(c => c.id === id))).length;
+  h += '<div style="font-size:13px;color:var(--text-secondary);margin-bottom:4px;"><b style="color:inherit;">' + diaRutaNombre(dia) + '</b> · ' + ids.length + ' cliente' + (ids.length === 1 ? '' : 's') + (sinGeo ? ' · ⚠️ ' + sinGeo + ' sin ubicación' : '') + '</div>';
+  if(!ids.length) h += '<p style="font-size:14px;color:var(--text-secondary);">Este día todavía no tiene clientes.</p>';
+  ids.forEach((id, i) => {
+    const c = clientes.find(x => x.id === id);
+    h += '<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--border);">' +
+      '<div style="width:26px;height:26px;border-radius:13px;background:#534ab7;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex:0 0 auto;">' + (i + 1) + '</div>' +
+      '<div style="flex:1;min-width:0;"><div style="font-weight:600;font-size:14px;">' + perfEsc(c ? c.nombre : '(cliente borrado)') + '</div><div style="font-size:12px;color:var(--text-secondary);">' + perfEsc(c ? [c.direccion, c.municipio].filter(Boolean).join(', ') : '') + (c && !geoOk(c) ? ' · ⚠️ sin ubicación' : '') + '</div></div>' +
+      '<button style="' + RT_BTN + '" onclick="rutaMover(' + i + ',-1)">▲</button><button style="' + RT_BTN + '" onclick="rutaMover(' + i + ',1)">▼</button><button style="' + RT_BTN + '" onclick="rutaQuitar(' + i + ')">✕</button></div>';
+  });
+  h += '<button style="' + PERF_BTN_P + '" onclick="rutaAgregar()">➕ Agregar clientes</button>';
+  h += '<div style="display:flex;gap:8px;"><button style="' + PERF_BTN + '" onclick="rutaOrdenar()">📍 Ordenar por cercanía</button><button style="' + PERF_BTN + '" onclick="rutaRepartirForm()">✨ Repartir en días</button></div>';
+  h += '<div style="display:flex;gap:8px;"><button style="' + PERF_BTN + '" onclick="imprimirRutaDia()">🖨️ Imprimir el día</button><button style="' + PERF_BTN + '" onclick="rutaVaciarDia()">Vaciar el día</button></div>';
+  if(q !== 'yo') h += '<p style="font-size:12px;color:var(--text-secondary);margin:10px 0 0;">📤 La ruta se envía sola a ' + perfEsc(rutaNombreQ().replace(/^Vendedor: /, '')) + ' cada vez que cambiás algo. Él la ve en la pestaña Ruta de su pantalla.' + (_rutaPub ? '<br>' + _rutaPub : '') + '</p>';
+  perfOverlay(h);
+}
+function rutaCambiarQuien(v){ _rutaQuien = v; rutaPintar(); }
+function rutaDia(k){ _rutaDia = k; rutaPintar(); }
+let _rutasTimer = null;
+function rutasPublicarDebounced(){
+  if(modoEspejo || !metasStockDisponible()) return;
+  clearTimeout(_rutasTimer);
+  _rutasTimer = setTimeout(async () => {
+    const out = {};
+    Object.keys(rutasStore()).forEach(q => { if(q !== 'yo') out[q] = rutaDe(q); });
+    try { await stockLlamar('publicar_rutas', { rutas: out }); _rutaPub = '✓ Enviada ' + new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }); }
+    catch(e) { _rutaPub = '⚠️ No se pudo enviar. Se reintenta con el próximo cambio.'; }
+    if(_rutaVista === 'lista') rutaPintar();
+  }, 1200);
+}
+function rutaGuardar(){ saveMov(); rutasPublicarDebounced(); rutaPintar(); }
+function rutaMover(i, d){
+  const l = rutaDe(_rutaQuien)[_rutaDia], j = i + d;
+  if(j < 0 || j >= l.length) return;
+  const t = l[i]; l[i] = l[j]; l[j] = t;
+  rutaGuardar();
+}
+function rutaQuitar(i){ rutaDe(_rutaQuien)[_rutaDia].splice(i, 1); rutaGuardar(); }
+function rutaVaciarDia(){
+  const l = rutaDe(_rutaQuien)[_rutaDia];
+  if(!l.length) return;
+  if(!confirm('¿Sacar los ' + l.length + ' clientes del ' + diaRutaNombre(_rutaDia).toLowerCase() + '?')) return;
+  rutaDe(_rutaQuien)[_rutaDia] = [];
+  rutaGuardar();
+}
+async function rutaOrdenar(){
+  const l = rutaDe(_rutaQuien)[_rutaDia];
+  if(l.length < 2){ perfToast('Agregá al menos 2 clientes'); return; }
+  const desdeMi = confirm('¿Empezar desde tu ubicación actual?\n\nAceptar = desde acá\nCancelar = arrancar por el cliente más alejado');
+  const ini = desdeMi ? await rutaInicio() : null;
+  if(desdeMi && !ini) perfToast('No pude tomar tu ubicación; ordené sin punto de partida');
+  rutaDe(_rutaQuien)[_rutaDia] = rutaOrdenarIds(l, ini);
+  const sin = l.filter(id => !geoOk(clientes.find(c => c.id === id))).length;
+  if(sin) perfToast(sin + ' cliente(s) sin ubicación quedaron al final');
+  rutaGuardar();
+}
+function rutaAgregar(){
+  _rutaVista = 'agregar'; _rutaSel = []; _rutaBusq = '';
+  let h = perfTitulo('➕ Agregar al ' + diaRutaNombre(_rutaDia).toLowerCase());
+  h += '<input id="rutaBuscar" placeholder="Buscar cliente…" oninput="rutaBuscar(this.value)" style="width:100%;box-sizing:border-box;padding:12px;border-radius:10px;border:1px solid var(--border);background:var(--bg);color:inherit;font-size:16px;">';
+  h += '<div id="rutaListaAdd"></div>';
+  h += '<button style="' + PERF_BTN_P + '" onclick="rutaAgregarListo()">Agregar seleccionados (<span id="rutaCantSel">0</span>)</button>';
+  h += '<button style="' + PERF_BTN + '" onclick="rutaPintar()">Volver</button>';
+  perfOverlay(h);
+  rutaPintarAdd();
+}
+function rutaBuscar(v){ _rutaBusq = v; rutaPintarAdd(); }
+function rutaPintarAdd(){
+  const ruta = rutaDe(_rutaQuien), ya = ruta[_rutaDia];
+  const q = (_rutaBusq || '').trim().toLowerCase();
+  const enOtro = id => { const d = DIAS_RUTA.find(x => x[0] !== _rutaDia && ruta[x[0]].includes(id)); return d ? d[1] : ''; };
+  const lista = clientes.filter(c => !ya.includes(c.id) && (!q || [c.nombre, c.direccion, c.municipio].some(t => String(t || '').toLowerCase().includes(q)))).slice(0, 120);
+  document.getElementById('rutaListaAdd').innerHTML = lista.length ? lista.map(c => {
+    const otro = enOtro(c.id);
+    return '<label style="display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--border);"><input type="checkbox" ' + (_rutaSel.includes(c.id) ? 'checked ' : '') + 'onchange="rutaToggleSel(\'' + c.id + '\')" style="width:20px;height:20px;"><span style="flex:1;min-width:0;"><b style="font-size:14px;">' + perfEsc(c.nombre) + '</b><br><span style="font-size:12px;color:var(--text-secondary);">' + perfEsc([c.direccion, c.municipio].filter(Boolean).join(', ')) + (otro ? ' · ya está el ' + otro : '') + (geoOk(c) ? '' : ' · ⚠️ sin ubicación') + '</span></span></label>';
+  }).join('') : '<p style="font-size:14px;color:var(--text-secondary);">No hay más clientes para agregar.</p>';
+  document.getElementById('rutaCantSel').textContent = _rutaSel.length;
+}
+function rutaToggleSel(id){
+  const i = _rutaSel.indexOf(id);
+  if(i >= 0) _rutaSel.splice(i, 1); else _rutaSel.push(id);
+  document.getElementById('rutaCantSel').textContent = _rutaSel.length;
+}
+function rutaAgregarListo(){
+  const l = rutaDe(_rutaQuien)[_rutaDia];
+  _rutaSel.forEach(id => { if(!l.includes(id)) l.push(id); });
+  rutaGuardar();
+}
+function rutaRepartirForm(){
+  _rutaVista = 'repartir';
+  const ya = rutaDe(_rutaQuien);
+  const asig = new Set([].concat(...DIAS_RUTA.map(d => ya[d[0]])));
+  const libres = clientes.filter(c => !asig.has(c.id)).length;
+  let h = perfTitulo('✨ Repartir en días');
+  h += '<p style="font-size:13px;color:var(--text-secondary);margin:0 0 8px;">Arma un recorrido por cercanía y lo reparte en partes iguales entre los días que elijas. Funciona mejor si los clientes ya tienen ubicación en el mapa.</p>';
+  h += '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;">' + DIAS_RUTA.map(d => '<label style="display:flex;align-items:center;gap:6px;font-size:14px;"><input id="rpd_' + d[0] + '" type="checkbox"' + (d[0] !== 'sab' && d[0] !== 'dom' ? ' checked' : '') + ' style="width:18px;height:18px;"> ' + d[1] + '</label>').join('') + '</div>';
+  h += '<label style="display:flex;align-items:flex-start;gap:8px;font-size:14px;margin-top:6px;"><input type="radio" name="rpAlcance" value="libres" checked style="margin-top:3px;"> Solo los clientes que no están en ningún día (' + libres + ')</label>';
+  h += '<label style="display:flex;align-items:flex-start;gap:8px;font-size:14px;margin-top:6px;"><input type="radio" name="rpAlcance" value="todos" style="margin-top:3px;"> Todos los clientes (' + clientes.length + '). Reemplaza toda la hoja de ruta de ' + perfEsc(rutaNombreQ()) + '.</label>';
+  h += '<button style="' + PERF_BTN_P + '" onclick="rutaRepartirHacer()">Repartir</button>';
+  h += '<button style="' + PERF_BTN + '" onclick="rutaPintar()">Volver</button>';
+  perfOverlay(h);
+}
+async function rutaRepartirHacer(){
+  const dias = DIAS_RUTA.map(d => d[0]).filter(k => document.getElementById('rpd_' + k).checked);
+  if(!dias.length){ perfToast('Elegí al menos un día'); return; }
+  const todos = document.querySelector('input[name="rpAlcance"][value="todos"]').checked;
+  const ruta = rutaDe(_rutaQuien);
+  let ids;
+  if(todos){
+    if(!confirm('Esto reemplaza toda la hoja de ruta de ' + rutaNombreQ() + '. ¿Seguís?')) return;
+    ids = clientes.map(c => c.id);
+    DIAS_RUTA.forEach(d => { ruta[d[0]] = []; });
+  } else {
+    const asig = new Set([].concat(...DIAS_RUTA.map(d => ruta[d[0]])));
+    ids = clientes.filter(c => !asig.has(c.id)).map(c => c.id);
+  }
+  if(!ids.length){ perfToast('No hay clientes para repartir'); return; }
+  const ini = confirm('¿Empezar el recorrido desde tu ubicación actual?') ? await rutaInicio() : null;
+  const rep = rutaRepartir(ids, dias, ini);
+  dias.forEach(k => { ruta[k] = ruta[k].concat(rep[k]); });
+  _rutaDia = dias[0];
+  rutaGuardar();
+}
+function imprimirRutaDia(){
+  try {
+    const ids = rutaDe(_rutaQuien)[_rutaDia];
+    if(!ids.length){ perfToast('Este día no tiene clientes'); return; }
+    const filas = ids.map((id, i) => {
+      const c = clientes.find(x => x.id === id) || {};
+      const td = 'padding:8px;border:1px solid #ccc;font-size:14px;';
+      return '<tr><td style="' + td + 'text-align:center;">' + (i + 1) + '</td><td style="' + td + '"><b>' + perfEsc(c.nombre || '(cliente borrado)') + '</b></td><td style="' + td + '">' + perfEsc([c.direccion, c.municipio].filter(Boolean).join(', ')) + '</td><td style="' + td + '">' + perfEsc(c.telefono || '') + '</td><td style="' + td + 'width:28%;"></td><td style="' + td + 'width:34px;"></td></tr>';
+    }).join('');
+    const th = 'padding:8px;border:1px solid #ccc;background:#534ab7;color:#fff;text-align:left;font-size:13px;';
+    const html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Hoja de ruta</title></head><body style="font-family:Arial,sans-serif;margin:20px;color:#333;"><div style="border-bottom:3px solid #534ab7;padding-bottom:8px;margin-bottom:14px;"><h1 style="margin:0;color:#534ab7;font-size:22px;">🗺️ Hoja de ruta · ' + diaRutaNombre(_rutaDia) + '</h1><p style="margin:4px 0 0;color:#666;">' + perfEsc(nombreBoleta()) + ' · ' + perfEsc(rutaNombreQ()) + ' · ' + ids.length + ' clientes</p></div><table style="width:100%;border-collapse:collapse;"><thead><tr><th style="' + th + '">#</th><th style="' + th + '">Cliente</th><th style="' + th + '">Dirección</th><th style="' + th + '">Teléfono</th><th style="' + th + '">Notas</th><th style="' + th + '">✓</th></tr></thead><tbody>' + filas + '</tbody></table></body></html>';
+    const v = window.open('', '', 'width=1000,height=800');
+    v.document.write(html); v.document.close();
+    setTimeout(() => v.print(), 500);
+  } catch(e) { alert('Error generando la hoja de ruta: ' + e.message); }
+}
+
+// ---------- Lo que ve el vendedor ----------
+let vdDiaRuta = null, vdMapaModo = 'todos', vdRutaLinea = null;
+function vdRutaIds(dia){ const r = vdEstado && vdEstado.ruta; return (r && Array.isArray(r[dia])) ? r[dia] : []; }
+function vdRutaDia(k){ vdDiaRuta = k; vdRenderRuta(); }
+function vdRutaAlMapa(){ vdMapaModo = 'ruta'; vdIrA('mapa'); }
+function vdSetMapaModo(m){ vdMapaModo = m; vdRenderMapa(); }
+function vdRenderRuta(){
+  const cont = document.getElementById('vdListaRuta');
+  if(!cont) return;
+  const card = 'background:var(--card); border:1px solid var(--border); border-radius:14px; padding:14px; margin-bottom:10px;';
+  const ruta = vdEstado && vdEstado.ruta;
+  if(!ruta){ cont.innerHTML = '<div style="' + card + ' text-align:center; color:var(--text-secondary);">Todavía no tenés una hoja de ruta. Pedile al dueño que la arme y tocá ↻ Actualizar.</div>'; return; }
+  const hoy = diaRutaHoy();
+  if(!vdDiaRuta) vdDiaRuta = hoy;
+  const chips = '<div style="display:flex;gap:6px;overflow-x:auto;margin-bottom:12px;">' + DIAS_RUTA.map(d => {
+    const n = vdRutaIds(d[0]).length, act = d[0] === vdDiaRuta;
+    return '<button onclick="vdRutaDia(\'' + d[0] + '\')" style="flex:0 0 auto;padding:9px 12px;border-radius:10px;border:2px solid ' + (act ? 'var(--accent)' : 'var(--border)') + ';background:' + (act ? 'var(--accent)' : 'var(--card)') + ';color:' + (act ? '#fff' : 'var(--text)') + ';font-size:13px;font-weight:700;">' + d[1] + (d[0] === hoy ? ' •' : '') + (n ? ' · ' + n : '') + '</button>';
+  }).join('') + '</div>';
+  const lista = vdRutaIds(vdDiaRuta).map(id => vdCliente(id)).filter(Boolean);
+  let h = chips + '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin:2px 0 10px;"><b style="font-size:15px;">' + diaRutaNombre(vdDiaRuta) + (vdDiaRuta === hoy ? ' (hoy)' : '') + ' · ' + lista.length + ' cliente' + (lista.length === 1 ? '' : 's') + '</b>' + (lista.length ? '<button onclick="vdRutaAlMapa()" style="padding:8px 10px;border-radius:10px;border:2px solid var(--border);background:var(--card);color:var(--text);font-size:13px;font-weight:700;">🗺️ Ver en el mapa</button>' : '') + '</div>';
+  if(!lista.length) h += '<p style="text-align:center;color:var(--text-secondary);">No tenés clientes asignados este día.</p>';
+  h += lista.map((c, i) => '<div style="display:flex;gap:10px;align-items:flex-start;"><div style="width:28px;height:28px;border-radius:14px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex:0 0 auto;margin-top:12px;">' + (i + 1) + '</div><div style="flex:1;min-width:0;">' + vdCardHtml(c) + '</div></div>').join('');
+  cont.innerHTML = h;
+}
+
+function vdCardHtml(c) {
+  const card = 'background:var(--card); border:1px solid var(--border); border-radius:14px; padding:14px; margin-bottom:10px;';
+  const cola = vdCola();
+  const pendCli = id => cola.filter(e => e.clienteId === id).length + vdEnvios.filter(e => e.clienteId === id && e.estado === 'pendiente' && e.tipo !== 'visita').length;
+    const v = vdVisita(c), dias = v ? diasDesdeFecha(v) : null, pend = pendCli(c.id);
+    return `<div style="${card}">
+      <div style="display:flex; justify-content:space-between; align-items:baseline; gap:8px;">
+        <b style="font-size:17px;">${repEsc(c.nombre)}${esMayorista(c) ? ' <span style="display:inline-block; font-size:11px; font-weight:700; color:#534ab7; background:rgba(83,74,183,.15); padding:2px 8px; border-radius:10px; vertical-align:middle;">Mayorista</span>' : ''}</b>
+        ${c.deuda > 0 ? `<b style="color:#e67e22; font-size:14px; white-space:nowrap;">Debe ${fmt(c.deuda)}</b>` : ''}
+      </div>
+      <div style="font-size:13px; color:var(--text-secondary); margin-top:2px;">${repEsc([c.direccion, c.municipio].filter(Boolean).join(', ')) || 'Sin dirección'}</div>
+      <div style="font-size:12px; margin-top:3px; color:${dias === null ? 'var(--text-muted)' : (dias > 15 ? '#e74c3c' : 'var(--text-secondary)')};">${dias === null ? 'Sin visitas registradas' : (dias === 0 ? 'Visitado hoy' : 'Última visita hace ' + dias + (dias === 1 ? ' día' : ' días'))}${pend ? ' · <span style="color:#e67e22;">⏳ ' + pend + ' sin confirmar</span>' : ''}</div>
+      <div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;">
+        <button onclick="vdAbrirBoleta('${c.id}')" style="flex:1 1 90px; padding:11px 6px; background:var(--accent); color:white; border:none; border-radius:10px; font-weight:700; font-size:14px; cursor:pointer;">🧾 Boleta</button>
+        <button onclick="vdVisitado('${c.id}')" style="flex:1 1 90px; padding:11px 6px; background:none; border:2px solid var(--border); color:var(--text); border-radius:10px; font-weight:700; font-size:14px; cursor:pointer;">✓ Visitado</button>
+        ${c.deuda > 0 ? `<button onclick="vdAbrirCobro('${c.id}')" style="flex:1 1 90px; padding:11px 6px; background:#27ae60; color:white; border:none; border-radius:10px; font-weight:700; font-size:14px; cursor:pointer;">💰 Cobrar</button>` : ''}
+      </div>
+      <div style="display:flex; gap:14px; margin-top:10px; font-size:13px;">
+        ${c.telefono ? `<a href="tel:${repEsc(String(c.telefono).replace(/[^\d+]/g, ''))}" style="color:var(--accent); text-decoration:none;">📞 Llamar</a>` : ''}
+        <a href="${repEsc(vdMapsUrl(c))}" target="_blank" style="color:var(--accent); text-decoration:none;">📍 Ubicación</a>
+      </div>
+    </div>`;
 }
 
 function renderFinanzas(){
@@ -5327,7 +5627,7 @@ async function vdCargar(manual) {
   try {
     await vdFlush();
     const r = await empApi('v_estado');
-    vdEstado = { nombre: r.nombre, publicado: r.publicado, cuenta: r.cuenta || null };
+    vdEstado = { nombre: r.nombre, publicado: r.publicado, cuenta: r.cuenta || null, ruta: r.ruta || null };
     localStorage.setItem('vend_cache_v1', JSON.stringify(vdEstado));
     try { const m = await empApi('v_mis_envios'); vdEnvios = m.envios || []; } catch(e) {}
     if(red) red.textContent = r.publicado ? 'Lista actualizada ' + new Date(r.publicado.t).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
@@ -5342,17 +5642,19 @@ async function vdCargar(manual) {
 
 function vdRenderTodo() {
   vdRenderClientes();
+  vdRenderRuta();
   vdRenderEnviados();
   if(vdVista === 'mapa') vdRenderMapa();
 }
 
 function vdIrA(vista) {
   vdVista = vista;
-  ['clientes', 'mapa', 'enviados'].forEach(v => {
+  ['clientes', 'ruta', 'mapa', 'enviados'].forEach(v => {
     document.getElementById('vdVista' + v.charAt(0).toUpperCase() + v.slice(1)).style.display = (v === vista) ? 'block' : 'none';
     const b = document.getElementById('vdTab-' + v);
     b.style.color = (v === vista) ? 'var(--accent)' : 'var(--text-secondary)';
   });
+  if(vista === 'ruta') vdRenderRuta();
   if(vista === 'mapa') setTimeout(vdRenderMapa, 50);
   if(vista === 'enviados') vdRenderEnviados();
 }
@@ -5451,8 +5753,13 @@ async function vdVisitado(id) {
 // ----- mapa -----
 function vdRenderMapa() {
   const nota = document.getElementById('vdMapaNota');
-  const conGeo = vdClientes().filter(c => c.lat != null && c.lng != null);
-  const sinGeo = vdClientes().length - conGeo.length;
+  if(!vdDiaRuta) vdDiaRuta = diaRutaHoy();
+  const baseMapa = (vdMapaModo === 'ruta') ? vdRutaIds(vdDiaRuta).map(id => vdCliente(id)).filter(Boolean) : vdClientes();
+  const conGeo = baseMapa.filter(c => c.lat != null && c.lng != null);
+  const sinGeo = baseMapa.length - conGeo.length;
+  const chipMapa = (m, t) => '<button onclick="vdSetMapaModo(\'' + m + '\')" style="flex:1;padding:9px 6px;border-radius:10px;border:2px solid ' + (vdMapaModo === m ? 'var(--accent)' : 'var(--border)') + ';background:' + (vdMapaModo === m ? 'var(--accent)' : 'var(--card)') + ';color:' + (vdMapaModo === m ? '#fff' : 'var(--text)') + ';font-size:13px;font-weight:700;">' + t + '</button>';
+  const chipsEl = document.getElementById('vdMapaChips');
+  if(chipsEl) chipsEl.innerHTML = chipMapa('todos', 'Todos los clientes') + chipMapa('ruta', 'Ruta: ' + diaRutaNombre(vdDiaRuta));
   if(typeof L === 'undefined') { document.getElementById('vdMapaDiv').innerHTML = '<p style="padding:16px; color:var(--text-secondary);">El mapa necesita internet. Probá de nuevo cuando tengas conexión.</p>'; return; }
   if(!vdMapa) {
     vdMapa = L.map('vdMapaDiv').setView([-34.6037, -58.3816], 5);
@@ -5460,14 +5767,16 @@ function vdRenderMapa() {
   }
   vdMarcadores.forEach(m => vdMapa.removeLayer(m));
   vdMarcadores = [];
-  conGeo.forEach(c => {
-    const m = L.marker([c.lat, c.lng]).addTo(vdMapa);
+  if(vdRutaLinea){ vdMapa.removeLayer(vdRutaLinea); vdRutaLinea = null; }
+  conGeo.forEach((c, idx) => {
+    const m = L.marker([c.lat, c.lng], vdMapaModo === 'ruta' ? { icon: L.divIcon({ className: '', html: '<div style="width:30px;height:30px;border-radius:15px;background:#534ab7;color:#fff;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;box-shadow:0 1px 4px rgba(0,0,0,.4);">' + (idx + 1) + '</div>', iconSize: [30, 30], iconAnchor: [15, 15] }) } : undefined).addTo(vdMapa);
     m.bindPopup(`<b>${repEsc(c.nombre)}</b><br>${repEsc([c.direccion, c.municipio].filter(Boolean).join(', '))}${c.deuda > 0 ? '<br><span style="color:#e67e22;">Debe ' + fmt(c.deuda) + '</span>' : ''}<br><button onclick="vdAbrirBoleta('${c.id}')" style="margin-top:6px; padding:6px 10px; border:none; border-radius:6px; background:#534ab7; color:white; font-weight:700;">🧾 Boleta</button> <button onclick="vdVisitado('${c.id}')" style="margin-top:6px; padding:6px 10px; border:1px solid #ccc; border-radius:6px; background:white; font-weight:700;">✓ Visitado</button>`);
     vdMarcadores.push(m);
   });
+  if(vdMapaModo === 'ruta' && conGeo.length > 1 && L.polyline) vdRutaLinea = L.polyline(conGeo.map(c => [c.lat, c.lng]), { color: '#534ab7', weight: 4, opacity: 0.7 }).addTo(vdMapa);
   if(vdMapa.invalidateSize) vdMapa.invalidateSize();
   if(vdMarcadores.length && L.featureGroup) { try { vdMapa.fitBounds(L.featureGroup(vdMarcadores).getBounds().pad(0.2)); } catch(e) {} }
-  nota.textContent = conGeo.length + ' cliente' + (conGeo.length === 1 ? '' : 's') + ' en el mapa' + (sinGeo ? ' · ' + sinGeo + ' sin ubicación todavía (el dueño las completa al abrir su mapa)' : '');
+  nota.textContent = (vdMapaModo === 'ruta' ? 'Ruta del ' + diaRutaNombre(vdDiaRuta).toLowerCase() + ': ' : '') + conGeo.length + ' cliente' + (conGeo.length === 1 ? '' : 's') + ' en el mapa' + (sinGeo ? ' · ' + sinGeo + ' sin ubicación todavía (el dueño las completa al abrir su mapa)' : '');
 }
 
 // ----- boleta -----
